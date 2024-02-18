@@ -6,7 +6,8 @@ from yaml.loader import SafeLoader
 
 class Config:
     def __init__(self, ana_def):
-        self.f_sys = './Sys/cfg_sys.yml'    # full path to the system config file
+        SCRIPT_DIR = os.path.dirname(__file__)
+        self.f_sys = os.path.join(SCRIPT_DIR, 'Sys/cfg_sys.yml')    # full path to the system config file
         self.ana_def = ana_def    # full path to the user yaml config file
         self.rel_ana_dir = None    # relative (to ./Data) path to the user analysis dir
         self.data = None      # config data read from both Sys and usr config files

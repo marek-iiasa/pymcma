@@ -11,7 +11,7 @@
 #   size of cubes in scaled coordinates, values of A/R in native (model-vars) scales
 
 # import sys		# needed for sys.exit()
-# import os
+import os
 # from os import R_OK, access
 # from os.path import isfile
 # import pandas as pd
@@ -21,8 +21,8 @@ import argparse
 from datetime import datetime as dt
 # from datetime import timedelta as td
 
-from driver import *  # driver (run the analysis set-up and iterations)
-from cfg import *  # configuration (dir/file location, parameter values, etc
+from .driver import *  # driver (run the analysis set-up and iterations)
+from .cfg import *  # configuration (dir/file location, parameter values, etc
 
 # import from remote dir does no work
 # sys.path.append('/Users/marek/Documents/GitHub/yayue/models/pipa/pipa0')
@@ -62,9 +62,13 @@ def read_args():
 
 
 # noinspection SpellCheckingInspection
-if __name__ == '__main__':
+def main():
     tstart = dt.now()
     # print('Started at:', str(tstart))
+
+    # TODO remove if will be unused
+    SCRIPT_DIR = os.path.dirname(__file__)
+    WORK_DIR = os.getcwd()
 
     # process cmd-line args (currently only usr-name)
     args = read_args()
@@ -107,3 +111,6 @@ if __name__ == '__main__':
         print('\nStarted at: ', str(tstart))
         print('Finished at:', str(tend))
         print(f'Wall-clock execution time: {time_diff.seconds} sec.')
+
+if __name__ == '__main__':
+    main()
