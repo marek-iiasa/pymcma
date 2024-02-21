@@ -10,7 +10,7 @@ authors = [
 ]
 description = "PyMCMA is a software written in Python which main purpose is solving Multi-criteria Model Analysis problem."
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.11"
 dependencies = [
     "dill==0.3.7",
     "matplotlib==3.8.2",
@@ -28,11 +28,14 @@ classifiers = [
 ]
 
 [project.scripts]
-pymcma-cli = "pyMCMA:mcma.main"
+pymcma = "pyMCMA:mcma.main"
 
 [project.urls]
 Homepage = "https://github.com/marek-iiasa/pymcma"
 Issues = "https://github.com/marek-iiasa/pymcma/issues"
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["src", "wdir"]
+
+[tool.setuptools.package-data]
+pyMCMA = ["wdir/*"]

@@ -1,1 +1,4 @@
-include src/pyMCMA/Sys/cfg_sys.yml
+include src/pyMCMA/wdir/Models/xpipa.dll
+include src/pyMCMA/wdir/Templates/cfg.yml
+include src/pyMCMA/wdir/Templates/example.py
+include src/pyMCMA/wdir/anaTst/cfg.yml

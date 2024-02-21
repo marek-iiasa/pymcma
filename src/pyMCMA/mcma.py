@@ -12,6 +12,8 @@
 
 # import sys		# needed for sys.exit()
 import os
+import shutil
+import subprocess
 # from os import R_OK, access
 # from os.path import isfile
 # import pandas as pd
@@ -38,6 +40,9 @@ from .cfg import *  # configuration (dir/file location, parameter values, etc
 # from tspipa import sbPipa as sbPipa  # sand-box tiny Pipa testing model, developed as concrete (without abstract)
 # from tsjg1 import jg1 as jg1  # sand-box tiny jg1 model
 
+PYMCMA_WDIR = '.pymcma_wdir'
+SCRIPT_DIR = os.path.dirname(__file__)
+
 
 def read_args():
     descr = """
@@ -61,14 +66,47 @@ def read_args():
     return cl_args
 
 
+def create_wdir(wdir_path):
+    print('Initializing new working directory.')
+
+    dirs_to_create = ['Models', 'Templates', 'anaTst']
+
+    for dir in dirs_to_create:
+        os.mkdir(os.path.join(wdir_path, dir))
+
+    files_to_copy = [
+        'wdir/Models/xpipa.dll',
+        'wdir/Templates/cfg.yml',
+        'wdir/Templates/example.py',
+        'wdir/anaTst/cfg.yml',
+        ]
+
+    for file in files_to_copy:
+        shutil.copyfile(src=os.path.join(SCRIPT_DIR, file),
+                        dst=os.path.join(wdir_path, file.removeprefix('wdir/')))
+
+    # Create empty hidden file that indicates that we already ran pymcma
+    # in this directory at least once
+    open(PYMCMA_WDIR, 'a').close()
+    if os.name == 'nt':
+        subprocess.check_call(['attrib', '+H', PYMCMA_WDIR])
+
+
 # noinspection SpellCheckingInspection
 def main():
     tstart = dt.now()
     # print('Started at:', str(tstart))
 
-    wdir = './wdir'     # development wdir is under src-dir, should be '.' for packaged version
-    assert os.path.exists(wdir), f'The work directory "{wdir}" does not exist'
-    os.chdir(wdir)
+    # Simple way to determine whether our package is installed or not
+    if 'site-packages' in SCRIPT_DIR:
+        # If script executes from site-packages we use current dir as a wdir
+        if not os.path.exists(PYMCMA_WDIR):
+            create_wdir(os.path.dirname(PYMCMA_WDIR))
+    else:
+        wdir = './wdir'
+        assert os.path.exists(wdir), f'The work directory "{wdir}" does not exist'
+        os.chdir(wdir)
+
     # process cmd-line args (currently only usr-name)
     args = read_args()
     ana_dir = args.ana_id or 'anaTst'
