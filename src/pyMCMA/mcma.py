@@ -41,19 +41,19 @@ from .cfg import *  # configuration (dir/file location, parameter values, etc
 
 def read_args():
     descr = """
-    Computing uniformly distributed Pareto front for specified criteria in the provided model.
+    Computing uniformly distributed Pareto-front for specified criteria of provided model.
 
     Examples of usage:
     python mcma.py
     python mcma.py -h
-    python mcma.py --usr marek
+    python mcma.py --ana_id test1
     """
 
     parser = argparse.ArgumentParser(
         description=descr, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    user = "--usr : string\n    User_id, also defines working directory."
-    parser.add_argument("--usr", help=user)
+    ana_id = "--ana_id : string\n    analysis id, also defines the analysis directory."
+    parser.add_argument("--ana_id", help=ana_id)
     # parser.add_argument("-s", "--save", action="store_true")  # on/off flag
 
     # parse cli
@@ -66,19 +66,20 @@ def main():
     tstart = dt.now()
     # print('Started at:', str(tstart))
 
-    # TODO remove if will be unused
-    SCRIPT_DIR = os.path.dirname(__file__)
-    WORK_DIR = os.getcwd()
-
+    wdir = './wdir'     # development wdir is under src-dir, should be '.' for packaged version
+    assert os.path.exists(wdir), f'The work directory "{wdir}" does not exist'
+    os.chdir(wdir)
     # process cmd-line args (currently only usr-name)
     args = read_args()
-    usr = args.usr or 'tst_usr'
-    print(f'User_id: {usr}')
-    # assert usr == 'Jasio', f'just a test stop'
+    ana_dir = args.ana_id or 'anaTst'
+    print(f'ana_dir: {ana_dir}')
+    assert os.path.exists(ana_dir), f'The analysis directory "{ana_dir}" does not exist'
+    os.chdir(ana_dir)
+    # assert ana_dir == 'Jasio', f'just a test stop'
 
     # process the run configuration options and configure the working space
-    ana_def = './Data/ana_dir.yml'    # yaml file defining the analysis directory
-    config = Config(ana_def)    # process yaml config. file
+    # ana_def = './Data/ana_dir.yml'    # yaml file defining the analysis directory
+    config = Config()    # process yaml config. file
     cfg = config.data   # dict with config. options
 
     # optional standard output redirection

@@ -1,1 +1,0 @@
-Space for cfg file and results (structure and example to be changed)
