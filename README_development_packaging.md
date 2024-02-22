@@ -36,6 +36,35 @@ Notice, that `your_analysis_dir` should contain `cfg.yml` file which is
 described in the documentation.
 
 
+# Running development version (PyCharm)
+
+1. Git clone the repository
+
+2. Open the repository directory in the PyCharm
+
+3. Create the virual environment in this directory, using for example
+```bash
+$ python -m venv venv
+```
+
+4. Activate virtual envitornment:
+```bash
+$ source venv/bin/activate
+```
+
+5. Install the development dependencies:
+```bash
+$ pip install -r requirments.txt
+```
+
+6. Example execution configuration:
+    - Interpreter from the virtual environment
+    - Module instead of script, with path `src.pyMCMA`
+    - `--install` or `--anaDir your_dir` as a command line arguments.
+    - Absolute path to the desired working directory (root of the repository in the example).
+
+![[pycharm_configuration.png]]
+
 
 # Packaging
 
