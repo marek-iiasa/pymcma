@@ -16,9 +16,9 @@ model_id: ../Models/xpipa
 # crit_def: [ [cost, min, cost], [carb, min, carbBal], [water, min, water], [greenFue, max, greenFTot] ]
 # crit_def: [ [cost, min, cost], [carb, min, carbBal], [water, min, water] ]
 # crit_def: [ [cost, min, cost], [water, min, water], [greenFue, max, greenFTot] ]
-crit_def: [ [cost, min, cost], [greenFue, max, greenFTot] ]
+# crit_def: [ [cost, min, cost], [greenFue, max, greenFTot] ]
 # crit_def: [ [cost, min, cost], [water, min, water], [greenFue, max, greenFTot] ]
-# crit_def: [ [cost, min, cost], [carb, min, carbBal], [water, min, water], [greenFue, max, greenFTot] ]
+crit_def: [ [cost, min, cost], [carBal, min, carbBal], [water, min, water], [grFuel, max, greenFTot] ]
 
 
 # The following specs are optional.  --------------------------------------------
