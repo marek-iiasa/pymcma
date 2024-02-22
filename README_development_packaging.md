@@ -63,7 +63,7 @@ $ pip install -r requirments.txt
     - `--install` or `--anaDir your_dir` as a command line arguments.
     - Absolute path to the desired working directory (root of the repository in the example).
 
-![[pycharm_configuration.png]]
+![Pycharm configuration](pycharm_configuration.png)
 
 
 # Packaging
