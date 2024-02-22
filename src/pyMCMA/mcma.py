@@ -13,7 +13,6 @@
 # import sys		# needed for sys.exit()
 import os
 import shutil
-import subprocess
 # from os import R_OK, access
 # from os.path import isfile
 # import pandas as pd
@@ -40,39 +39,38 @@ from .cfg import *  # configuration (dir/file location, parameter values, etc
 # from tspipa import sbPipa as sbPipa  # sand-box tiny Pipa testing model, developed as concrete (without abstract)
 # from tsjg1 import jg1 as jg1  # sand-box tiny jg1 model
 
-PYMCMA_WDIR = '.pymcma_wdir'
 SCRIPT_DIR = os.path.dirname(__file__)
-
 
 def read_args():
     descr = """
     Computing uniformly distributed Pareto-front for specified criteria of provided model.
 
     Examples of usage:
-    python mcma.py
     python mcma.py -h
-    python mcma.py --ana_id test1
+    python mcma.py --install
+    python mcma.py --anaDir iniTst
     """
 
     parser = argparse.ArgumentParser(
         description=descr, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    ana_id = "--ana_id : string\n    analysis id, also defines the analysis directory."
-    parser.add_argument("--ana_id", help=ana_id)
-    # parser.add_argument("-s", "--save", action="store_true")  # on/off flag
+    instal = "--install : \n    install pyMCMA and test it."
+    anaDir = "--anaDir string :\n    define analysis directory."
+    parser.add_argument("--install", action="store_true", help=instal)  # on/off flag
+    parser.add_argument("--anaDir", help=anaDir)
 
     # parse cli
     cl_args = parser.parse_args()
     return cl_args
 
 
-def create_wdir(wdir_path):
+def create_wdir():
     print('Initializing new working directory.')
 
     dirs_to_create = ['Models', 'Templates', 'anaTst']
 
     for dir in dirs_to_create:
-        os.mkdir(os.path.join(wdir_path, dir))
+        os.mkdir(dir)
 
     files_to_copy = [
         'wdir/Models/xpipa.dll',
@@ -83,13 +81,7 @@ def create_wdir(wdir_path):
 
     for file in files_to_copy:
         shutil.copyfile(src=os.path.join(SCRIPT_DIR, file),
-                        dst=os.path.join(wdir_path, file.removeprefix('wdir/')))
-
-    # Create empty hidden file that indicates that we already ran pymcma
-    # in this directory at least once
-    open(PYMCMA_WDIR, 'a').close()
-    if os.name == 'nt':
-        subprocess.check_call(['attrib', '+H', PYMCMA_WDIR])
+                        dst=file.removeprefix('wdir/'))
 
 
 # noinspection SpellCheckingInspection
@@ -97,20 +89,23 @@ def main():
     tstart = dt.now()
     # print('Started at:', str(tstart))
 
-    # Simple way to determine whether our package is installed or not
-    if 'site-packages' in SCRIPT_DIR:
-        # If script executes from site-packages we use current dir as a wdir
-        if not os.path.exists(PYMCMA_WDIR):
-            create_wdir(os.path.dirname(PYMCMA_WDIR))
-    else:
-        wdir = './wdir'
-        assert os.path.exists(wdir), f'The work directory "{wdir}" does not exist'
-        os.chdir(wdir)
-
     # process cmd-line args (currently only usr-name)
+    wdir = '.'     # current dir is the wdir for both development and packaged version
+    # assert os.path.exists(wdir), f'The work directory "{wdir}" does not exist'
+    # os.chdir(wdir)
+    # process cmd-line args (currently only either install or ana_dir)
     args = read_args()
-    ana_dir = args.ana_id or 'anaTst'
-    print(f'ana_dir: {ana_dir}')
+    # ana_dir = args.ana_id or 'anaTst'
+    install = args.install
+    ana_dir = args.anaDir
+    if install:
+        assert ana_dir is None, f'ERROR: no directory should not be defined for the installation.'
+        ana_dir = 'anaTst'
+        print('Installing pyMCMA.')
+        create_wdir()
+    else:
+        assert ana_dir is not None, f'ERROR: analysis directory should be defined.'
+    print(f'Analysis directory: {ana_dir}')
     assert os.path.exists(ana_dir), f'The analysis directory "{ana_dir}" does not exist'
     os.chdir(ana_dir)
     # assert ana_dir == 'Jasio', f'just a test stop'
