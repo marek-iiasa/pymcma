@@ -5,11 +5,10 @@
 # Required
 version: 2
 
-# Set the OS, Python version and other tools you might need
-build:
-  os: macOS 14.3.1
-  tools:
-    python: "3.11"
+# Set the OS, Python version and other tools you might need build:
+#  os: macOS 14.3.1
+#  tools:
+#    python: "3.11"
     # You can also specify other tool versions:
 
 # Build documentation in the "docs/" directory with Sphinx
