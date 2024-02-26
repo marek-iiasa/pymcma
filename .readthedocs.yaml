@@ -5,8 +5,8 @@
 # Required
 version: 2
 
-# added by MM
-advice.detachedHead: false
+# tried by MM; it did not succeed to build the doc, which fails with info: You are in 'detached HEAD' state.
+# advice.detachedHead: false
 
 # Set the OS, Python version and other tools you might need build:
 #  os: macOS 14.3.1
