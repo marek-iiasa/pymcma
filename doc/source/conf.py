@@ -7,22 +7,22 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'pymcma'
-copyright = '2024, todo_authors_todo'
-author = 'todo_authors_todo'
-release = 'todo_0.1_todo'
+copyright = '2024, M. Makowski, J. Granat, A. Shekhovtsov'
+author = 'M. Makowski, J. Granat, A. Shekhovtsov'
+release = '1.0'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = []
+extensions = [
+    'sphinx_rtd_theme'
+]
 
 templates_path = ['_templates']
 exclude_patterns = []
 
-
-
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'alabaster'
+html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']

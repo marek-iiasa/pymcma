@@ -3,12 +3,12 @@ requires = ["setuptools >= 61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pyMCMA"
-version = "1.0.0"
+name = "pymcma"
+version = "0.1.0"
 authors = [
   { name="Example Author", email="author@example.com" },
 ]
-description = "PyMCMA is a software written in Python which main purpose is solving Multi-criteria Model Analysis problem."
+description = "Pymcma is a software written in Python which main purpose is solving Multi-criteria Model Analysis problem."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
