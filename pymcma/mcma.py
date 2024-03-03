@@ -76,6 +76,8 @@ def create_wdir():
         'wdir/Models/xpipa.dll',
         'wdir/Templates/cfg.yml',
         'wdir/Templates/example.py',
+        'wdir/Templates/example.dat',
+        'wdir/Templates/Readme.txt',
         'wdir/anaTst/cfg.yml',
         ]
 

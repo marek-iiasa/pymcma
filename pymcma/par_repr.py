@@ -117,7 +117,7 @@ class ParProg:     # progress in Pareto set representation
         mx_hight = 9.0
         ncols = 2
         n_plots = len(self.neigh)
-        if len(self.neigh[self.cur_step - 1][-1]) == 0:
+        if self.cur_step > 0 and len(self.neigh[self.cur_step - 1][-1]) == 0:
             n_plots -= 1    # plot for last stage not generated
         nrows = n_plots // 2 + n_plots % 2
         # print(f'{nrows = } {n_plots = } rest {n_plots % 2}--------------------------')
