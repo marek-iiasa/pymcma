@@ -6,22 +6,21 @@ build-backend = "setuptools.build_meta"
 name = "pymcma"
 version = "0.1.0"
 authors = [
-  { name="Example Author", email="author@example.com" },
+  { name="M. Makowski, J. Granat, A. Shekhovtsov", email="marek@iiasa.ac.at" },
 ]
 description = "Pymcma is a software written in Python which main purpose is solving Multi-criteria Model Analysis problem."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "dill==0.3.7",
-    "matplotlib==3.8.2",
-    "numpy==1.26.2",
-    "pandas==2.1.4",
-    "Pyomo==6.7.0",
-    "scipy==1.11.4",
-    "seaborn==0.13.0",
-    "PyYAML==6.0.1",
-    "glpk==5.0",
-    "ipopt==1.0.3"
+    "dill",
+    "matplotlib",
+    "numpy",
+    "pandas",
+    "Pyomo",
+    "scipy",
+    "seaborn",
+    "PyYAML",
+    "glpk",
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -30,14 +29,14 @@ classifiers = [
 ]
 
 [project.scripts]
-pymcma = "pyMCMA:mcma.main"
+pymcma = "pymcma:mcma.main"
 
 [project.urls]
 Homepage = "https://github.com/marek-iiasa/pymcma"
 Issues = "https://github.com/marek-iiasa/pymcma/issues"
 
 [tool.setuptools.packages.find]
-where = ["src", "wdir"]
+where = ["."]
 
 [tool.setuptools.package-data]
 pyMCMA = ["wdir/*"]
