@@ -6,8 +6,8 @@ from yaml.loader import SafeLoader
 
 class Config:
     def __init__(self):     # current wdir is the ana_dir; cfg.yml must be located here
-        # todo: the cfg_sys location shall differ between the development and the distribute-package versions
-        self.f_sys = './../Sys/cfg_sys.yml'    # full path to the system config file
+        SCRIPT_DIR = os.path.dirname(__file__)
+        self.f_sys = os.path.join(SCRIPT_DIR, 'Sys/cfg_sys.yml')    # full path to the system config file
         self.f_usr = './cfg.yml'    # usr config
         self.data = None      # config data read from both Sys and usr config files
         self.rd_cfg(self.f_sys)

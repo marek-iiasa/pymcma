@@ -1,0 +1,12 @@
+dill
+matplotlib
+numpy
+pandas
+Pyomo
+scipy
+seaborn
+PyYAML
+build
+wheel
+glpk
+ipopt

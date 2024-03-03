@@ -1,0 +1,6 @@
+include pymcma/wdir/Models/xpipa.dll
+include pymcma/wdir/Templates/cfg.yml
+include pymcma/wdir/Templates/example.py
+include pymcma/wdir/Templates/example.dat
+include pymcma/wdir/Templates/Readme.txt
+include pymcma/wdir/anaTst/cfg.yml
