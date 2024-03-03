@@ -117,7 +117,7 @@ class ParProg:     # progress in Pareto set representation
         mx_hight = 9.0
         ncols = 2
         n_plots = len(self.neigh)
-        if self.cur_step > 0 and len(self.neigh[self.cur_step - 1][-1]) == 0:
+        if len(self.neigh[self.cur_step - 1][-1]) == 0:
             n_plots -= 1    # plot for last stage not generated
         nrows = n_plots // 2 + n_plots % 2
         # print(f'{nrows = } {n_plots = } rest {n_plots % 2}--------------------------')
@@ -214,7 +214,8 @@ class ParRep:     # representation of Pareto set
             # print(f'\nSetting the criteria activity and the A/R for the selected cube.')
             cube.setAR()     # set AR values (directly in the Crit objects)
             cube.lst(self.cur_cube)
-            print(f'Proceed to generation of the optimization problem.')
+            if self.cfg.get('verb') > 1:
+                print(f'Proceed to generation of the optimization problem.')
             # print(f'The largest out of {len(cube_lst)} cubes has size = {mx_size:.2e}')
 
     def is_inside(self, s, s1, s2):    # return False if s is outside cube(s1, s2)

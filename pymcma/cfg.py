@@ -6,15 +6,14 @@ from yaml.loader import SafeLoader
 
 class Config:
     def __init__(self):     # current wdir is the ana_dir; cfg.yml must be located here
-        SCRIPT_DIR = os.path.dirname(__file__)
-        self.f_sys = os.path.join(SCRIPT_DIR, 'Sys/cfg_sys.yml')    # full path to the system config file
+        # todo: the cfg_sys location shall differ between the development and the distribute-package versions
+        self.f_sys = './../Sys/cfg_sys.yml'    # full path to the system config file
         self.f_usr = './cfg.yml'    # usr config
         self.data = None      # config data read from both Sys and usr config files
         self.rd_cfg(self.f_sys)
         self.rd_cfg(self.f_usr)   # usr_cfg is in the current dir
         # print(f'Configuration options read:\n\t{self.data}')
         self.chk_dirs()       # check the needed dirs
-        print(f'Configuration options after processing:\n\t{self.data}')
         # raise Exception('test stop')
 
     def rd_cfg(self, f_name):       # upload yaml config file
@@ -45,7 +44,7 @@ class Config:
                     self.data.update({k: v})
 
     def sys_default(self):       # set default values of Sys/cfg
-        sysDefaults = {'resDir': 'Results/', 'mxIter': 16, 'parRep': True, 'showPlot': True, 'verb': 1}
+        sysDefaults = {'resDir': 'Results/', 'mxIter': 1000, 'parRep': True, 'showPlot': True, 'verb': 0}
         self.data = {}
         for k, v in sysDefaults.items():  # set default values
             self.data.update({k: v})
