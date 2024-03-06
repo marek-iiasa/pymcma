@@ -5,6 +5,9 @@ file should be well-written,
 PyMCMA is a Python package for generation of uniformly distributed
 Pareto-efficient representation for the provided core-mode.
 
+You can read more about the project in the
+[online documentation](https://pymcma.readthedocs.io/).
+
 # Installation
 
 Below you can find a short description of how to install `pymcma` software.
