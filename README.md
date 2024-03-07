@@ -57,6 +57,7 @@ the [link](https://pymcma.readthedocs.io/).
 	 which shall display the command-line options.
 
 3. Copying the examples and templates
+
     The following command copies to the current directory the files organized
 	 into three directories:
 
@@ -64,15 +65,14 @@ the [link](https://pymcma.readthedocs.io/).
         $ pymcma --install
     ```
 
-    This command creates in the current directory the initial workspace and
-    then you can run the example analysis on the model shipped with the
-    package using the following command:
+    The copied files are needed for running the example analysis on the model
+	 shipped with the package using; this can be done by the following command:
 
     ```bash
         $ pymcma --anaDir anaTst
     ```
 
-    You can find more detail about working directory in the
+    More details about the ``pymcma`` installation and testing is available
     [documentation](https://pymcma.readthedocs.io/).
 
 # Basic usage
