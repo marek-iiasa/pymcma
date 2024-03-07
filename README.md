@@ -50,9 +50,15 @@ the [link](https://pymcma.readthedocs.io/).
         $ conda activate pymcma
         $ conda install pymcma
     ```
+	 Installation shall be tested by running:
+    ```bash
+        $ pymcma -h
+    ```
+	 which shall display the command-line options.
 
-3. Creation of the workspace
-    The workspace for initial analysis can be created by running:
+3. Copying the examples and templates
+    The following command copies to the current directory the files organized
+	 into three directories:
 
     ```bash
         $ pymcma --install
