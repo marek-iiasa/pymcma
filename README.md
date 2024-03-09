@@ -1,6 +1,6 @@
 # What is `pymcma`?
 PyMCMA is a Python package for generation of uniformly distributed
-Pareto-efficient representation for the provided core-mode.
+Pareto-efficient representation for the provided core-model.
 
 You can read more about the project in the
 [online documentation](https://pymcma.readthedocs.io/).
@@ -54,7 +54,7 @@ the [link](https://pymcma.readthedocs.io/).
     ```bash
         $ pymcma -h
     ```
-	 which shall display the command-line options.
+	 which displays the command-line options.
 
 3. Copying the examples and templates
 
@@ -85,8 +85,8 @@ run the following command to start analysis:
     $ pymcma --anaDir anaTst
 ```
 
-To make analysis for your own model you need to create you own core model in
-Pyomo and export it in `dill` format and adapt the configuration file for
-this model.
+To make analysis for your own model you need to create a core model in
+Pyomo and export it in the `dill` format, as well as adapt the ``pymcma`` configuration file for
+your desired analysis.
 Please refer to the [User Guide](https://pymcma.readthedocs.io/user_guide.html)
-section in the documentation to comprehensive instruction about how to do it.
+section in the documentation for comprehensive guidelines.
