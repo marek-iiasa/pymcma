@@ -1,8 +1,7 @@
-import numpy as np
-from matplotlib import mlab
-
-from .cube import *
-from .plots import *
+import pandas as pd
+from operator import itemgetter
+from .cube import ParSol, Cubes, aCube
+from .ini_sol import Corners
 
 
 # noinspection SpellCheckingInspection
@@ -13,21 +12,22 @@ class ParProg:
         self.steps = []             # list of reporting steps (max distances between neighbors
         self.cur_step = 0           # index of the current step
         self.neigh = {}             # neighbors for each step
+        self.df_stages = None
 
         self.ini_steps()    # initialize steps
 
     def ini_steps(self):  # steps of progress
-        self.steps = [50, 40, 30, 20, 10, 7, 6, 5, 3, 2, 1]
+        self.steps = [50, 30, 20, 10, 7, 5, 3, 2, 1]
 
-    def update(self, cube_size):     # store info of pairs of neighbors waiting for processing
-        if cube_size > self.steps[self.cur_step]:
+    def update(self, cube_size, is_last):     # store info of pairs of neighbors waiting for processing
+        if cube_size > self.steps[self.cur_step] and not is_last:
             return
         itr = self.parRep.cur_itr
         n_sol = len(self.parRep.sols)
         # pairs = self.parRep.neigh.copy()
         pairs = self.parRep.cubes.cand.copy()
-        print(f'itr {itr}; {n_sol} Pareto solutions computed, {len(pairs)} neighbors remain for processing.')
-        if cube_size > 0.:
+        print(f'itr {itr}; {n_sol} Pareto solutions computed, {len(pairs)} neighbor-pairs remain for processing.')
+        if not is_last:
             self.neigh.update({self.cur_step: (itr, n_sol, len(pairs), round(cube_size, 2), pairs)})
             # print(f'List of {len(pairs)} cubes at step {self.cur_step} (distance {cube_size}) stored.')
             self.cur_step += 1
@@ -52,7 +52,6 @@ class ParProg:
             n_cubes = info[2]
             mx_cube = info[3]
             summary_list.append((step, itr, self.steps[step], n_sol, n_cubes, mx_cube))
-            # todo: there is a bug in reporting (when all cubes are processed) number of cubes remained
             print(f'Stage {step} (stage_UpBnd {self.steps[step]}, mxCubeSize {mx_cube}): during {itr} itrs '
                   f'{n_sol} sols. computed, {n_cubes} remained for processing.')
             # uncomment only when needed (the below produces a lot of printouts)
@@ -65,93 +64,9 @@ class ParProg:
                 print(f'Size of cube[{cube_id}]: {round(acube.size, 2)}, mx_cube = {mx_cube}')
             '''
 
-        summary_df = pd.DataFrame(summary_list, columns=['step', 'itr', 'upBnd', 'n_sol', 'n_cubes', 'mx_cube'])
-        self.summary_plot(summary_df)
-        self.progress_plot()
-
-    def summary_plot(self, summary_df):
-        fig = plt.figure(figsize=(10, 5))
-        fig.canvas.manager.set_window_title(f'Summary data of {len(self.neigh)} computation stages')
-
-        plot_kw = dict(marker='o', markersize=10, linestyle='--', linewidth=3)
-        ax = fig.add_subplot(1, 2, 1)
-        ax.plot(summary_df['step'], summary_df['itr'],
-                color='tab:blue',
-                label='Number of iterations',
-                **plot_kw)
-
-        ax.plot(summary_df['step'], summary_df['n_sol'],
-                color='tab:orange',
-                label='Number of distinct solutions',
-                **plot_kw)
-
-        ax.set_xticks(summary_df['step'])
-        ax.set_ylabel('Number of iterations/solutions')
-        ax.set_xlabel('Computation stage')
-        ax.legend(loc='upper left')
-
-        ax = fig.add_subplot(1, 2, 2)
-        ax.plot(summary_df['step'], summary_df['upBnd'],
-                color='tab:red',
-                label='Cuboid size bound',
-                **plot_kw)
-
-        ax.plot(summary_df['step'], summary_df['mx_cube'],
-                color='tab:green',
-                label='Actual max cuboid-size',
-                **plot_kw)
-
-        ax.set_xticks(summary_df['step'])
-        ax.set_ylabel('Cuboid size')
-        ax.set_xlabel('Computation stage')
-        ax.legend(loc='upper right')
-
-        plt.tight_layout()
-
-    def progress_plot(self):
-        mx_hight = 9.0
-        ncols = 2
-        n_plots = len(self.neigh)
-        if len(self.neigh[self.cur_step - 1][-1]) == 0:
-            n_plots -= 1    # plot for last stage not generated
-        nrows = n_plots // 2 + n_plots % 2
-        # print(f'{nrows = } {n_plots = } rest {n_plots % 2}--------------------------')
-        fig = plt.figure(figsize=(5 * ncols, min(mx_hight, 2.8 * nrows)))
-        fig.canvas.manager.set_window_title(f'Distribution of distance between neighbour solutions.')
-        fig.subplots_adjust(wspace=0.3, hspace=0.85)
-
-        for step in self.neigh:
-            if len(self.neigh[step][-1]) == 0:
-                print(f'Empty cube list for computation stage {step}.')
-                return
-            ax = fig.add_subplot(nrows, ncols, step + 1)
-            neighbour_cube_sizes = []
-            if self.parRep.cfg.get('verb') > 3:
-                print(f'{step = }')
-                print(f'neigh {self.neigh[step]}')
-            for cube_id, cube_size in self.neigh[step][-1]:
-                if self.parRep.cfg.get('verb') > 3:
-                    print(f'{cube_id = }, {cube_size = }')
-                neighbour_cube_sizes.append(cube_size)
-
-            ax.hist(neighbour_cube_sizes,
-                    bins=50,
-                    range=(0, 50),  # was 100
-                    density=True)
-
-            # Check if list has at least two different values, so we can calculate KDE
-            if neighbour_cube_sizes[0] != neighbour_cube_sizes[-1]:
-                kde = mlab.GaussianKDE(neighbour_cube_sizes)
-                x = np.linspace(0, 50, 200)
-                y = kde(x)
-                ax.plot(x, y, color='k', linewidth=4)
-
-            ax.set_xticks(range(0, 60, 10))
-            ax.set_xlabel('Distance between neighbor solutions')
-            ax.set_ylabel('Probability Density')
-            ax.set_title(f'Stage {step}')
-
-        plt.tight_layout()
+        self.df_stages = pd.DataFrame(summary_list, columns=['step', 'itr', 'upBnd', 'n_sol', 'n_cubes', 'mx_cube'])
+        # self.summary_plot(self.df_stages)
+        # self.progress_plot()
 
 
 # noinspection SpellCheckingInspection
@@ -167,6 +82,7 @@ class ParRep:     # representation of Pareto set
         self.cur_itr = None   # current itr_id
         self.from_cube = False   # next preferences from a cube
         self.n_corner = 0       # number of already generated selfish solutions
+        self.ini_obj = None     # object a class handling initial solutions
         self.df_sol = None  # df with solutions prepared for plots; defined in the self.summary()
         self.dir_name = self.cfg.get('resDir')
 
@@ -174,23 +90,15 @@ class ParRep:     # representation of Pareto set
         mc.scale()          # (re)define scales for criteria values
 
     def pref(self):     # entry point for each new iteration
-        if not self.from_cube:  # no cubes yet, generate and compute selfish solution
-            for (i, cr) in enumerate(self.mc.cr):
-                if i == self.n_corner:  # selfish sol. for i-th criterion
-                    print(f'Computing selfish solution for crit: {cr.name}.')
-                    cr.is_active = True
-                    cr.asp = cr.utopia
-                else:
-                    cr.is_active = False
-                    delta = abs(cr.utopia - cr.nadir) / 2.  # take half of the (utopia, nadir) range
-                    cr.asp = cr.utopia - cr.mult * delta
-                cr.is_fixed = False
-                cr.res = cr.nadir
-            self.n_corner += 1
+        if not self.from_cube:  # no cubes yet, generate A/R for next initial solution (excl. neutral solution)
+            if self.ini_obj is None:
+                self.ini_obj = Corners(self.mc)  # persistent object handling A/R specs for all Pareto-set corners
+                print('specs of Pareto corners defined.')
+            self.mc.iniSolDone = self.ini_obj.next_corner()  # return True, if A/R for the last corner defined
         else:   # all selfish solutions ready
             cube = self.cubes.select()  # the cube defining A/R for new iteration
             if cube is not None:
-                self.progr.update(cube.size)
+                self.progr.update(cube.size, False)
             # else:
             #     self.progr.update(0.)
             if cube is None:
@@ -225,7 +133,7 @@ class ParRep:     # representation of Pareto set
         assert self.mc.is_opt, f'ParRep::addSol() called for non-optimal solution'
         self.cur_itr = itr_id
         vals = []     # crit values
-        a_vals = []     # crit values
+        a_vals = []     # crit achievements
         # sc_vals = []  # scaled crit values
         for cr in self.mc.cr:
             vals.append(cr.val)
@@ -246,34 +154,37 @@ class ParRep:     # representation of Pareto set
                 break
         if is_close:
             self.clSols.append(new_sol)
-            print(f'Solution {itr_id = } duplicates itr_id {new_sol.closeTo} (L-inf = {new_sol.distMx:.1e}). '
+            print(f'Solution[{itr_id}] duplicates sol[{new_sol.closeTo}] (L-inf = {new_sol.distMx:.1e}). '
                   f'There are {len(self.clSols)} duplicated Pareto solutions.')
-        else:   # check dominance with all sols found so far
+        else:   # unique solution; check dominance with all Pareto-sols found so far
             is_pareto = True
+            toPrune = []    # tmp list of solutions dominated by the current sol
             for s2 in self.sols:   # check if the new sol is close to any previous unique (i.e., not-close) sol
-                cmp_ret = new_sol.cmp(self.mc, s2)
+                cmp_ret = new_sol.cmp(s2)
                 if cmp_ret == 0:    # is Pareto
                     continue    # check next solution
                 elif cmp_ret > 0:   # new_sol dominates s2
-                    if self.cfg.get('verb') > 1:
+                    if self.cfg.get('verb') > -1:
                         print(f'\t-------------     current solution[{itr_id}] dominates solution[{s2.itr_id}].')
                     s2.domin = -itr_id      # mark s2 as dominated by the new solution, and continue checking next sol.
+                    toPrune.append(s2)
                 else:           # new_sol is dominated by s2
-                    if self.cfg.get('verb') > 1:
+                    if self.cfg.get('verb') > -1:
                         print(f'\t-------------     current solution[{itr_id}] is dominated by solution[{s2.itr_id}].')
                     is_pareto = False
                     break
             if is_pareto:
-                if self.cur_cube is not None:  # cur_cube undefined during computation of selfish solutions
-                    # no longer needed
-                    pass
-                self.sols.append(new_sol)
+                self.sols.append(new_sol)   # add to self.sols
                 if self.cfg.get('verb') > 1:
                     print(f'Solution {itr_id = } added to ParRep. There are {len(self.sols)} unique Pareto solutions.')
                 self.mk_cubes(new_sol)    # define cubes generated by this solution
+            for s2 in toPrune:   # remove dominated solutions from self.sols
+                print(f'\tsolution[{s2.itr_id}] dominated by solution[{itr_id}] removed from self.sols.')
+                self.sols.remove(s2)
 
-        if self.n_corner == len(self.mc.cr):
+        if self.mc.iniSolDone or self.n_corner == len(self.mc.cr):
             self.from_cube = True   # next preferences to be generated from cubes
+            # self.mc.iniSolDone = True   # initial solutions (except of (optional) neutral)
 
     def mk_cubes(self, s):  # generate cubes defined by the new solution s with each of previous distinct-solution
         # store_all = False
@@ -294,11 +205,16 @@ class ParRep:     # representation of Pareto set
 
     def summary(self):  # summary report
         # self.cubes.lst_cubes()  # list cubes
+        cand = sorted(self.cubes.cand, key=itemgetter(1), reverse=True)  # sort by size (just getting the largest)
+        if len(cand) > 0:
+            mx_size = cand[0][1]
+        else:
+            mx_size = 0
         print('\n')
-        self.progr.update(0.)   # store info on the unprocessed cubes, if any remain
+        self.progr.update(mx_size, True)   # store info on the unprocessed cubes, if any remain
         self.progr.summary()   # process info on the computation progress
 
-        # prepare df with solutions for plot2D
+        # prepare df with solutions for plots and storing as csv
         cols = ['itr_id']
         for cr in self.mc.cr:   # space for criteria values
             cols.append(cr.name)
@@ -320,20 +236,3 @@ class ParRep:     # representation of Pareto set
             new_row.update({'domin': s.domin})
             rows.append(new_row)
         self.df_sol = pd.DataFrame(rows)
-        f_name = f'{self.dir_name}df_sol.csv'
-        self.df_sol.to_csv(f_name, index=True)
-        print(f'{len(self.sols)} unique solutions stored in {f_name}. '
-              f'{len(self.clSols)} duplicated solutions skipped.')
-
-        # plot solutions
-        plots = Plots(self.cfg, self.df_sol, self.mc.cr)    # 3D plot
-        plots.plot2D()    # 2D plot
-        # plots.plot3D()    # 3D plot
-        plots.plot_parallel()  # Parallel coordinates plot
-
-        # todo: 3D plots need reconfiguration: either the change the pyCharm default browser to chrome or modify the
-        #  Safari version to either Safari beta or to Safari technology preview (see the Notes)
-        #  generation of 3D plots is suppressed until this problem will be solved.
-        # self.plot3()
-        # self.plot3a()
-        # raise Exception(f'ParRep::summary() not finished yet.')

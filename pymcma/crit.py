@@ -26,7 +26,8 @@ class Crit:     # definition and attributes of a single criterion
         self.minRange = 0.001  # min U/N range
         # the below values shall be defined/updated when available
         self.sc_var = -1.   # scaling of the var value (for defining the corresponding CAF); negative means undefined
-        self.is_active = None
+        self.is_active = None   # either True (for active) or False (for not-active) or None (for ignored)
+        self.is_ignored = None  # used in calculation Pareto-set corners
         self.is_fixed = False   # if True, then the crit. value is fixed at the self.asp value
         self.utopia = None  # set only once
         self.nadir = None   # checked, and possibly updated, every iteration, see self.updNadir()
@@ -100,14 +101,13 @@ class Crit:     # definition and attributes of a single criterion
                     shift = True     # move away from U
 
         if shift:
-            # todo: add check to prevent moving (back?) too close utopia
             self.nadir = val    # set val as new nadir appr.
             no_yes = ''
         else:
             no_yes = 'not'
 
         if shift:
-            print(f'\tnadir appr. of crit "{self.name}": {old_val:.2e} {no_yes} changed to {val:.2e} (in {stage=}).')
+            print(f'\tnadir appr. of crit "{self.name}": {old_val:.5e} {no_yes} changed to {val:.5e} (in {stage=}).')
         return shift
 
     def isBetter(self, val1, val2):   # return true if val1 is better or equal to than val2
@@ -142,6 +142,7 @@ class Crit:     # definition and attributes of a single criterion
 
     def setAR(self):   # set AR for neutral solution
         self.is_active = True   # make sure the criterion is active
+        self.is_ignored = None  # make sure the criterion is not itnored
         self.is_fixed = False
         is_max = self.mult == 1  # 1 for max-crit, -1 for min.
         delta = abs(self.utopia - self.nadir) / 3.  # equal distance between U, A, R, N

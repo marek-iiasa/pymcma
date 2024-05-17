@@ -2,10 +2,6 @@ import math
 # noinspection SpellCheckingInspection
 from operator import itemgetter  # , attrgetter
 
-# todo: add to ParSol:
-#   prune marker (to close to another solution) to skip (almost) duplicated solutions during cube generation
-#   improve info on CAF (global, in [U, N], vs itr in [A, R]
-
 
 # noinspection SpellCheckingInspection
 class ParSol:     # one Pareto solution
@@ -18,7 +14,7 @@ class ParSol:     # one Pareto solution
         self.closeTo = None     # None replaced by itr_id of a first solution that is close
         self.distMx = None      # None replaced by L-inf distance for close/duplicated solutions
         # print(f'Solution of itr_id {itr_id}: crit. values: {self.vals}, (achievements: {self.a_vals})')
-        print(f'Solution of itr_id {itr_id}, a_vals: {self.a_vals}')
+        print(f'Solution[{itr_id}] a_vals: {self.a_vals}')
 
     def neigh_inf(self, cube):     # print info on distances to corners of the parent cube
         s1 = cube.s1
@@ -32,22 +28,24 @@ class ParSol:     # one Pareto solution
             #       f's[{s2.itr_id}] {s2.a_vals[i]}')
             if not res <= val <= asp:
                 pass
-                # print(f'WARNING: Parsol:neigh_inf():: crit {cr.name} ({is_act=}), {val=} outside [{res=}, {asp=}]')
+                # print(f'WARNING: ParSol:neigh_inf():: crit {cr.name} ({is_act=}), {val=} outside [{res=}, {asp=}]')
             # The below occurs when the corresponding criterion is inactive
             # assert res <= val <= asp, f'Parsol:neigh_inf():: crit {cr.name} {val=} outside [{res=}, {asp=}]'
 
-    def cmp(self, mc, s2):     # compare (for domination) current solution with a previous
+    def cmp(self, s2):     # compare (for domination) current solution with the distinct solution s2
         is_better = None
         is_worse = None
-        for (cr, a1, a2) in zip(mc.cr, self.a_vals, s2.a_vals):  # loop over criteria achievements
+        for (a1, a2) in zip(self.a_vals, s2.a_vals):  # loop over criteria achievements
             if a1 < a2:
                 is_worse = True
-            else:
-                is_better = True    # self.a1 is better (or equal) than s2.a2
-        if is_worse is None:    # self is better than s2 on all criteria
-            return s2.itr_id    # current sol is Pareto but also dominates s2
-        if is_better is None:   # self is worse than s2 on all criteria
-            return -s2.itr_id   # current sol is dominated by s2
+            elif a1 > a2:
+                is_better = True    # self.a1 is better than s2.a2
+        if is_worse is None:    # self is not worse than s2 on any criterion
+            if is_better is None:   # should not happen (close solutions are excluded from comparison)
+                print(f'\t ------- WARNING: ParSol:cmp():: sol[{self.itr_id}] equal to sol[{s2.itr_id}].')
+            return 1  # current solution dominates (or is equal to, if warned) s2
+        if is_better is None:   # self is not better than s2 on any criterion but is worse on at least one crit.
+            return -1   # current sol is dominated by s2
         return 0    # self is Pareto, i.e., neither dominating nor dominated
 
     def is_close(self, s2):     # set self.closeTo and return True, if self is close to solution s2
@@ -108,6 +106,10 @@ class Cubes:     # collection of aCubes
     def cand_ok(self, c_id):  # check, if c can be used
         c = self.get(c_id)
         assert not c.used, f'candidate cube[{c_id}] was already used.'
+        for s in [c.s1, c.s2]:  # check if both cube-sol are indeed Pareto
+            if s not in self.sols:
+                return False    # sol. was removed from Pareto-sols, cube cannot be used
+            assert s.domin >= 0, f'Cubes::cand_ok(): candidate Pareto sol[{s.itr_id}] dominated by sol[{-s.domin}].'
         if self.is_empty(c):    # check, if after the cube creation a solution was insterted in the cube
             return True    # the cube can be used
         else:
@@ -118,7 +120,7 @@ class Cubes:     # collection of aCubes
             print(f'\nEmpty list of cubes: no more preferences can be defined.')
             return None
         # print(f'cand-list before sorting: {self.cand}')
-        self.cand = sorted(self.cand, key=itemgetter(1), reverse=True)  # sort the cand. id-list by decreasing cube-size
+        self.cand = sorted(self.cand, key=itemgetter(1), reverse=True)  # sort cand. id-list by decreasing cube-size
         # print(f'after sorting {len(self.cand)}: {self.cand}')
 
         # sub-list of candidates of the same size
@@ -140,7 +142,7 @@ class Cubes:     # collection of aCubes
             else:
                 id2prune.append(c_id)
                 if self.parRep.cfg.get('verb') > 1:
-                    print(f'non-empty cube [{c_id}] skipped (will be pruned).')
+                    print(f'non-empty cube [{c_id}] skipped (will be pruned from the candidate list).')
 
         best = None
         if len(lst) > 0:
@@ -149,7 +151,8 @@ class Cubes:     # collection of aCubes
             best.used = True
             id2prune.append(best.id)
             print(f'Best (of {len(self.cand)}) cube[{best.id}]: [{best.s1.itr_id}, {best.s2.itr_id}], '
-                  f'size={best.size:.2f}, degen = {best.is_degen}; {len(lst) - 1} cubes of the same size remain.')
+                  # f'size={best.size:.2f}, degen = {best.is_degen}; {len(lst) - 1} cubes of the same size remain.')
+                  f'size={best.size:.2f}, degen = {best.is_degen}.')
         else:
             print(f'\nNo cube from {len(self.cand)} candidates is suitable for defining preferences.')
             # print('Termination2')
@@ -237,6 +240,7 @@ class aCube:     # a Cube defined (in achievement values) by the given pair of n
     # define A/R values for splitting the cuboid (i.e., to find a new solution between s1 and s2)
     def setAR(self):
         for (i, cr) in enumerate(self.mc.cr):
+            cr.is_ignored = None    # ignored can be only for selfish solutions
             v1 = self.s1.vals[i]
             v2 = self.s2.vals[i]
             if cr.isBetter(v1, v2):  # s1 has better crit. value than s2
@@ -276,7 +280,7 @@ class aCube:     # a Cube defined (in achievement values) by the given pair of n
                     cr.is_active = False
                     cr.is_fixed = True
                     cr.res = cr.asp
-                    achiv = cr.val2ach(self.s1.a_vals[i])  # CAF (same/similar for both solutions)
+                    achiv = cr.val2ach(self.s1.vals[i])  # CAF (same/similar for both solutions)
                     self.aspAch.append(achiv)
                     self.resAch.append(achiv)
                     if self.mc.cfg.get('verb') > 1:

@@ -5,8 +5,7 @@ Reporting results of the MCMA iterations. Handling core-model is generic, i.e., 
 import warnings
 import pandas as pd
 import pyomo.environ as pe  # more robust than using import *
-# from ctr_mca import CtrMca
-# from crit import Crit
+from .plots import Plots
 
 
 # noinspection SpellCheckingInspection
@@ -30,8 +29,9 @@ class Report:
         self.rep_vars = mc.opt('rep_vars', [])    # names of the core-model variables to be included in the report
         self.sol_vars = []  # rows with values of vars in self.sol_vars, each row for one solution/iteration
         self.df_vars = None     # df with values (for each iter) of the vars defined in self.sol_vars
-        self.f_itr_df = f'{self.rep_dir}df_itr.csv'  # file name of the stored df
-        self.f_df_vars = f'{self.rep_dir}df_vars.csv'  # file name of the stored df
+        self.f_iters = f'{self.rep_dir}iters.csv'  # info on iterations
+        self.f_vars = f'{self.rep_dir}modelVars.csv'  # values of requested variables
+        self.f_pareto = f'{self.rep_dir}parFront.csv'  # values of requested variables
         #
         self.itr_id = -1
         self.prev_itr = 0   # number of previously made iters
@@ -40,33 +40,52 @@ class Report:
         print(f'\nReport ctor; results/plots dir: "{self.rep_dir}".     -------------')
         print(f'Core-model variables to be reported: {self.rep_vars}')
 
+    # driver of processing of each solution
     def itr(self, m):   # m: current mc_block (invariant core-model linked in the ctor)
         """Process values of criteria and other vars in the current solution."""
         # formatting doc: https://docs.python.org/3/library/string.html#formatstrings
 
-        self.itr_id += 1
+        self.itr_id += 1    # itr_id inilialized at -1
         self.mc.cur_itr_id = self.itr_id
         # print(f'Extracting current solution values from model {m.name}, iter_id {self.itr_id}.')
 
         if not self.mc.is_opt:
-            return
+            return  # refrain from storing non-optimal solutions
 
         cri_val = {}    # all criteria values in current solution
+        cri_ach = {}    # all criteria values in current solution
         m_vars = self.m1.component_map(ctype=pe.Var)  # only core model uses var-names associated with criteria
         for (i, var_name) in enumerate(self.var_names):  # extract m.vars defining criteria
             m_var = m_vars[var_name]
             val = m_var.value
-            cr_name = self.cr_names[i]
-            cri_val.update({cr_name: val})  # add to the dict of crit. values of the current solution
+            cr = self.mc.cr[i]
+            cri_val.update({cr.name: val})  # add to the dict of crit. values of the current solution
+            if self.mc.cur_stage > 3:  # don't store solutions during payOff table computations
+                cri_ach.update({cr.name: cr.val2ach(val)})  # add to the dict of crit. achiv. of the current solution
             if self.mc.verb > 2:
-                print(f'Value of variable "{var_name}" defining criterion "{cr_name}" = {val:.2e}')
+                print(f'Value of variable "{var_name}" defining criterion "{cr.name}" = {val:.2e}')
         if self.mc.verb > 2:
             print(f'Values of criteria {cri_val}')
 
-        self.mc.updCrit(cri_val)    # update crit attributes (value, optionally: nadir, utopia)
+        # update crit attributes (value, optionally: nadir, utopia)
+        self.mc.updCrit(cri_val)
         self.mc.prnPayOff()     # print, and optionally store payOff table
 
-        # add to self.itr_df one row with values of all attributes for each criterion
+        self.itr_inf(m)     # store one-line info on each iteration
+
+        if self.mc.cur_stage < 4:   # don't store solutions during payOff table computations
+            return
+
+        if len(self.rep_vars):
+            self.req_vals()     # extract and store values of the core-model variables requested to be reported
+
+        # if self.mc.par_rep is None:    # initialize ParRep() object (must be after payOff table was computed)
+        #     self.mc.par_rep = ParRep(self.mc)
+
+        # process sol. (defined by cr-attr.): check dominance/uniqueness, add to ParRep sols., generate cubes
+        self.mc.par_rep.addSol(self.itr_id)
+
+    def itr_inf(self, m):    # add to self.itr_df one row with values of all attributes for each criterion
         af = pe.value(m.af)
         af = round(af, 1)
         if self.mc.cur_stage > 1:
@@ -86,13 +105,22 @@ class Report:
             asp = crit.asp
             if asp is not None:
                 asp = round(asp, 1)
-            new_row.update({self.cols[cur_col]: asp})
+            if self.mc.cur_stage < 4:  # cannot calculate achievements before PayOff is completed
+                new_row.update({self.cols[cur_col]: asp})
+            else:
+                new_row.update({self.cols[cur_col]: crit.val2ach(asp)})
             cur_col += 1
-            new_row.update({self.cols[cur_col]: round(crit.val, 1)})
+            if self.mc.cur_stage < 4:  # cannot calculate achievements before PayOff is completed
+                new_row.update({self.cols[cur_col]: round(crit.val, 1)})
+            else:
+                new_row.update({self.cols[cur_col]: crit.a_val})
             cur_col += 1
             res = crit.res
             if res is not None:
-                res = round(res, 1)
+                if self.mc.cur_stage < 4:  # cannot calculate achievements before PayOff is completed
+                    res = round(res, 1)
+                else:
+                    res = round(crit.val2ach(res), 1)
             new_row.update({self.cols[cur_col]: res})
             cur_col += 1
             new_row.update({self.cols[cur_col]: crit.nadir})
@@ -108,9 +136,6 @@ class Report:
         with warnings.catch_warnings():  # suppress the pd.concat() warning
             warnings.filterwarnings("ignore", category=FutureWarning)
             self.itr_df = pd.concat([self.itr_df, df2], axis=0, ignore_index=True)
-
-        if len(self.rep_vars):
-            self.req_vals()     # extract and store values of the core-model variables requested to be reported
 
     # extract and store values of the variables to be included in the report
     def req_vals(self):
@@ -147,10 +172,41 @@ class Report:
 
     # generate and store dfs with info on criteria and the variables requested for report/plots
     def summary(self):
+        if self.mc.par_rep is None:  # Pareto-front summary
+            print('No report information collected.')
+            return
+
+        self.mc.par_rep.summary()    # prepare df_sol (solutions: itr, crit_val, cafs, info)
         # print(f'\nResults of {self.cur_itr} iters added to results of {self.prev_itr} previously made.')
-        self.itr_df.to_csv(self.f_itr_df, index=True)
-        print(f'\nCriteria attributes at each iteration are stored in the DataFrame "{self.f_itr_df}" file.')
+        self.itr_df.to_csv(self.f_iters, index=True)
+        print(f'\nCriteria attributes at each iteration are stored in the DataFrame "{self.f_iters}" file.')
         self.df_vars = pd.DataFrame(self.sol_vars)
-        self.df_vars.to_csv(self.f_df_vars, index=True)
+        self.df_vars.to_csv(self.f_vars, index=True)
         print(f'Values of core-model variables requested to be reported are stored in the DataFrame '
-              f'"{self.f_df_vars}" file.')
+              f'"{self.f_vars}" file.')
+
+        if self.mc.par_rep is None:  # return if Pareto-front is not computed
+            return
+
+        df = self.mc.par_rep.df_sol
+        for cr in self.mc.cr:   # format criteria values
+            df[cr.name] = df[cr.name].apply(lambda x: f'{x:.4e}')   # apply() returns series (a column)
+        f_name = self.f_pareto
+        df.to_csv(f_name, index=True)
+        print(f'{len(df)} unique solutions stored in {f_name}. '
+              f'{len(self.mc.par_rep.clSols)} duplicated solutions skipped.')
+
+        # plot solutions
+        plots = Plots(self.mc, self.df_vars)    # plots
+        plots.plot3D()    # 3D plot
+        plots.sol_stages()  # solutions & itr vs stage, cube-sizes vs stages
+        plots.kde_stages()  # KDE + histograms vs stages
+        # plots.plot2D()    # 2D plots
+        plots.parallel()  # Parallel coordinates plot
+        # plots.vars('actS')    # plot the requested model variables
+        # plots.vars_alternative()
+
+        plots.save_figures()
+        if plots.show_plot:
+            plots.show_figures()
+
