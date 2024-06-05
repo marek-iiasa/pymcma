@@ -1,7 +1,7 @@
 import pandas as pd
 from operator import itemgetter
 from .cube import ParSol, Cubes, aCube
-from .ini_sol import Corners
+# from .corners import Corners
 
 
 # noinspection SpellCheckingInspection
@@ -13,8 +13,8 @@ class ParProg:
         self.cur_step = 0           # index of the current step
         self.neigh = {}             # neighbors for each step
         self.df_stages = None
-
-        self.ini_steps()    # initialize steps
+        #
+        self.ini_steps()            # initialize steps
 
     def ini_steps(self):  # steps of progress
         self.steps = [50, 30, 20, 10, 7, 5, 3, 2, 1]
@@ -65,15 +65,14 @@ class ParProg:
             '''
 
         self.df_stages = pd.DataFrame(summary_list, columns=['step', 'itr', 'upBnd', 'n_sol', 'n_cubes', 'mx_cube'])
-        # self.summary_plot(self.df_stages)
-        # self.progress_plot()
 
 
 # noinspection SpellCheckingInspection
 class ParRep:     # representation of Pareto set
-    def __init__(self, mc):         # initialize corners by regularized selfish solutions
-        self.mc = mc        # CtrMca object
-        self.cfg = mc.cfg   # Config object
+    def __init__(self, wflow):         # initialize corners by regularized selfish solutions
+        self.wflow = wflow        # CtrMca object
+        self.mc = wflow.mc        # CtrMca object
+        self.cfg = wflow.cfg   # Config object
         self.sols = []      # Pareto-solutions (ParSol objects), excluding duplicated/close solutions
         self.clSols = []    # duplicated/close Pareto-solutions (ParSol objects)
         self.cubes = Cubes(self)  # the object handling all cubes
@@ -87,22 +86,19 @@ class ParRep:     # representation of Pareto set
         self.dir_name = self.cfg.get('resDir')
 
         print('Initializing Pareto-set exploration. --------------------')
-        mc.scale()          # (re)define scales for criteria values
 
-    def pref(self):     # entry point for each new iteration
-        if not self.from_cube:  # no cubes yet, generate A/R for next initial solution (excl. neutral solution)
-            if self.ini_obj is None:
-                self.ini_obj = Corners(self.mc)  # persistent object handling A/R specs for all Pareto-set corners
-                print('specs of Pareto corners defined.')
-            self.mc.iniSolDone = self.ini_obj.next_corner()  # return True, if A/R for the last corner defined
-        else:   # all selfish solutions ready
+    def pref(self, neutral=False):     # entry point for each new iteration
+        if neutral:     # set A/R for neutral solution
+            for cr in self.mc.cr:
+                cr.setAR()
+        else:   # set preferences from the selected cube
             cube = self.cubes.select()  # the cube defining A/R for new iteration
             if cube is not None:
                 self.progr.update(cube.size, False)
             # else:
             #     self.progr.update(0.)
             if cube is None:
-                self.mc.cur_stage = 6  # terminate the analysis
+                self.wflow.cur_stage = 6  # terminate the analysis
                 return
                 # raise Exception(f'ParRep::pref(): no cube defined.')
             self.cur_cube = cube.id     # remember cur_cube to attach its id to the solution (after it will be provided)
@@ -152,12 +148,13 @@ class ParRep:     # representation of Pareto set
             if new_sol.is_close(s2):
                 is_close = True
                 break
+        is_pareto = True
         if is_close:
+            is_pareto = False
             self.clSols.append(new_sol)
             print(f'Solution[{itr_id}] duplicates sol[{new_sol.closeTo}] (L-inf = {new_sol.distMx:.1e}). '
                   f'There are {len(self.clSols)} duplicated Pareto solutions.')
         else:   # unique solution; check dominance with all Pareto-sols found so far
-            is_pareto = True
             toPrune = []    # tmp list of solutions dominated by the current sol
             for s2 in self.sols:   # check if the new sol is close to any previous unique (i.e., not-close) sol
                 cmp_ret = new_sol.cmp(s2)
@@ -181,10 +178,7 @@ class ParRep:     # representation of Pareto set
             for s2 in toPrune:   # remove dominated solutions from self.sols
                 print(f'\tsolution[{s2.itr_id}] dominated by solution[{itr_id}] removed from self.sols.')
                 self.sols.remove(s2)
-
-        if self.mc.iniSolDone or self.n_corner == len(self.mc.cr):
-            self.from_cube = True   # next preferences to be generated from cubes
-            # self.mc.iniSolDone = True   # initial solutions (except of (optional) neutral)
+        return is_pareto
 
     def mk_cubes(self, s):  # generate cubes defined by the new solution s with each of previous distinct-solution
         # store_all = False

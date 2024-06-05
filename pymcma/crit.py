@@ -15,7 +15,7 @@ class Crit:     # definition and attributes of a single criterion
         self.var_name = var_name
         if typ == 'min':
             self.attr = 'minimized'
-            self.mult = -1.  # multiplier (used for simplifying handling)
+            self.mult = -1.  # multiplier (used for handling convenience)
         elif typ == 'max':
             self.attr = 'maximized'
             self.mult = 1.
@@ -24,6 +24,8 @@ class Crit:     # definition and attributes of a single criterion
         self.sc_ach = 100.   # U/N scale of achievements [0, sc_ach]
         # self.minRange = 0.01  # min U/N range
         self.minRange = 0.001  # min U/N range
+        # self.nadAdj = round(1. - 10 * self.minRange * self.mult, 3)     # multiplier to adjust Nadir value
+        # self.utoAdj = round(1. / self.nadAdj, 3)     # multiplier to adjust Utopia value
         # the below values shall be defined/updated when available
         self.sc_var = -1.   # scaling of the var value (for defining the corresponding CAF); negative means undefined
         self.is_active = None   # either True (for active) or False (for not-active) or None (for ignored)
@@ -39,7 +41,7 @@ class Crit:     # definition and attributes of a single criterion
         print(f"criterion '{cr_name}' ({self.attr}), core-model variable = '{var_name}'.")
 
     def val2ach(self, val):   # set a_val corresponding to the current val
-        if self.nadir is None:  # don't attempt to compute achievements in initial stages
+        if self.nadir is None or val is None:  # don't attempt to compute achievements in initial stages
             self.a_val = 0.
             return self.a_val
         rng = abs(self.utopia - self.nadir)
@@ -47,7 +49,12 @@ class Crit:     # definition and attributes of a single criterion
             f'too small difference between U {self.utopia} and N {self.nadir}.'
         a_val = self.sc_ach * abs(val - self.nadir) / rng
         a_val = round(a_val, 2)
-        # print(f'\tval2ach(): crit "{self.name}": {val=:.2e}, {a_val=:.2f}, U {self.utopia:.2e}, N {self.nadir:.2e}')
+        sc = max(abs(self.nadir), abs(val), 1.0)
+        close = abs(self.nadir - val) / sc < 10. * self.minRange
+        if not close and self.better(self.nadir, val):
+            a_val = - a_val
+            print('\tCrit::val2ach(): WARNING: solution value worse than (not adjusted) Nadir:')
+            print(f'\tcrit "{self.name}": {val=:.2e}, {a_val=:.2f}, U {self.utopia:.2e}, N {self.nadir:.2e}')
         return a_val
 
     # noinspection SpellCheckingInspection
@@ -60,7 +67,9 @@ class Crit:     # definition and attributes of a single criterion
 
     def setUtopia(self, val):   # to be called only once for each criterion
         assert self.utopia is None, f'utopia of crit {self.name} already set.'
-        self.utopia = val
+        # todo: for small values use shift instead multiplication
+        # self.utopia = self.utoAdj * val     # slightly adjusted to avoid problems with comparisons/update
+        self.utopia = val     # slightly adjusted to avoid problems with comparisons/update
         print(f'utopia of crit "{self.name}" set to {val}.')
 
     def updNadir(self, stage, val, minDiff):
@@ -88,10 +97,10 @@ class Crit:     # definition and attributes of a single criterion
             else:       # min-crit, tight to smaller values
                 if old_val - eps > val:
                     shift = True     # move closer to U
-        # in stages: 1, 3, and RFP: relax (move away from U) "too tight" values (from previous appr.)
         # in stage 1 (selfish opt.): just collect worst values of each criterion
+        # in stages: 2, 3: relax (move away from U) "too tight" values (from previous appr.)
         # in stage 3: 2nd stage on nadir appr.: apply AF with only one criterion active
-        # in stages >= 4: RFP, AF defined by preferences (A, R, activity) set for each criterion
+        # in stages in [4, 5]: AF defined by (A, R, activity), Nadir updated, if a crit. value is worse than Nadir appr.
         else:
             if self.mult == 1:  # max-crit, relax to smaller values
                 if old_val - eps > val:
@@ -101,7 +110,7 @@ class Crit:     # definition and attributes of a single criterion
                     shift = True     # move away from U
 
         if shift:
-            self.nadir = val    # set val as new nadir appr.
+            self.nadir = val    # set val as new nadir appr.  # slightly move to avoid
             no_yes = ''
         else:
             no_yes = 'not'
@@ -110,6 +119,39 @@ class Crit:     # definition and attributes of a single criterion
             print(f'\tnadir appr. of crit "{self.name}": {old_val:.5e} {no_yes} changed to {val:.5e} (in {stage=}).')
         return shift
 
+    def pwlBetter(self, val1, val2):   # return true if val1 is better or equal to than val2, or if val1/val2 is none
+        if val1 is None or val2 is None:  # PWL takes care about undefined values
+            return True
+        return self.eqBetter(val1, val2)
+
+    def eqBetter(self, val1, val2):   # return true if val1 is better or equal to than val2
+        if val1 is None or val2 is None:
+            raise Exception(f'Crit::eqBetter(): crit: {self.name}, cannot compare "{val1}" and "{val2}".')
+        if self.mult == 1:  # max criterion
+            if val1 >= val2:
+                return True
+        else:  # min criterion
+            if val1 <= val2:
+                return True
+        return False
+
+    def better(self, val1, val2):   # return true if val1 is (strictly) better than val2
+        if val1 is None or val2 is None:
+            raise Exception(f'Crit::better(): crit: {self.name}, cannot compare "{val1}" and "{val2}".')
+        sc = max(abs(val1), abs(val2), 1.0)
+        close = abs(val1 - val2) / sc < 10. * self.minRange
+        if close:
+            return False
+        if self.mult == 1:  # max criterion
+            if val1 > val2:
+                return True
+        else:  # min criterion
+            if val1 < val2:
+                return True
+        return False
+
+    '''
+    # old version, no longer used
     def isBetter(self, val1, val2):   # return true if val1 is better or equal to than val2
         if val1 is None or val2 is None:  # PWL takes care about undefined values
             return True
@@ -120,33 +162,34 @@ class Crit:     # definition and attributes of a single criterion
             if val1 <= val2:
                 return True
         return False
+    '''
 
-    def chkAR(self, pref_item, n_line):   # check correctness of A and R values
+    def chkAR(self, pref_item, n_line):   # check correctness of A and R values specified by the user
         asp = pref_item.asp
         res = pref_item.res
         # print(f'chkAR(): crit "{self.name}" ({self.attr}), U {self.utopia}, {asp = }, {res = }, N {self.nadir}')
         is_ok = True
-        if not self.isBetter(self.utopia, asp):
+        if not self.eqBetter(self.utopia, asp):
             # print(f'chkAR(): crit "{self.name}" ({self.attr}): specified A {asp} is better than U {self.utopia}')
             is_ok = False
-        if not self.isBetter(asp, res):
+        if not self.better(asp, res):
             # print(f'chkAR(): crit "{self.name}" ({self.attr}): specified R {res} is better than A {asp}')
             is_ok = False
-        if not self.isBetter(res, self.nadir):
+        if not self.eqBetter(res, self.nadir):
             # print(f'chkAR(): crit "{self.name}" ({self.attr}): specified R {res} is worse than N {self.nadir}.')
             is_ok = False
         if not is_ok:
-            raise Exception(f'chkAR(): preferences A = {asp}, R = {res} specified in line {n_line} for '
+            raise Exception(f'Crit::chkAR(): preferences A = {asp}, R = {res} specified in line {n_line} for '
                             f'criterion "{self.name}" are inconsistent.')
         return
 
     def setAR(self):   # set AR for neutral solution
         self.is_active = True   # make sure the criterion is active
-        self.is_ignored = None  # make sure the criterion is not itnored
+        self.is_ignored = None  # make sure that ignoring the criterion is undefined
         self.is_fixed = False
         is_max = self.mult == 1  # 1 for max-crit, -1 for min.
         delta = abs(self.utopia - self.nadir) / 3.  # equal distance between U, A, R, N
         self.asp = self.utopia - self.mult * delta
         self.res = self.asp - self.mult * delta
-        print(f"Preferences for neutral solution: cr_name = '{self.name}', {is_max = }, U = {self.utopia}, "
-              f"A = {self.asp}, R = {self.res}, N = {self.nadir}.")
+        print(f"Preferences for neutral solution: cr_name = '{self.name}', {is_max = }, U = {self.utopia:.2e}, "
+              f"A = {self.asp:.2e}, R = {self.res:.2e}, N = {self.nadir:.2e}.")

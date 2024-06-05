@@ -1,7 +1,6 @@
-# infinity = float('inf')
-
 """ Main function of the mcma: configure the analysis options and work-space. """
 
+# infinity = float('inf')
 # from os import R_OK, access
 # from os.path import isfile
 import sys		# needed for sys.exit()
@@ -73,10 +72,12 @@ def create_wdir():
 
 # noinspection SpellCheckingInspection
 def main():
+    version = '1.1.1'
+    print(f'pyMCMA ver. {version}')
     tstart = dt.now()
     # print('Started at:', str(tstart))
 
-    module_dir = 'pymcma'
+    module_dir = 'mcma'
     module_py = 'driver.py'
     as_module = os.path.exists(f'{module_dir}/{module_py}')  # true, if run as module, false if as pymcma
     if as_module:

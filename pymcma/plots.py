@@ -14,14 +14,16 @@ from .plots2 import InteractiveParallel
 sns.set()  # settings for seaborn plotting style
 
 
+# todo: Horizontal size of all plots should not be larger than the A4 paper width minus 20mm
 # noinspection SpellCheckingInspection
 class Plots:
-    def __init__(self, mc, df_vars):  # driver for plots
-        self.cfg = mc.cfg
-        self.mc = mc
-        self.df = mc.par_rep.df_sol  # df with distinct solutions
+    def __init__(self, wflow, df_vars):  # driver for plots
+        self.wflow = wflow
+        self.cfg = wflow.cfg
+        self.mc = wflow.mc
+        self.df = wflow.par_rep.df_sol  # df with distinct solutions
         self.df_vars = df_vars  # df with values of core-model variable (might be None)
-        self.cr_defs = mc.cr  # criteria specs
+        self.cr_defs = wflow.mc.cr  # criteria specs
         self.dir_name = self.cfg.get('resDir')  # result-dir: all plots shall be stored there
         self.show_plot = self.cfg.get('showPlot')
         self.hire_plot = self.cfg.get('hiPlot') is True  # True, if hi-res plots are requested
@@ -84,11 +86,11 @@ class Plots:
 
     def plot2D(self):
         n_plots = comb(self.n_crit, 2, exact=True)  # number of pairs for n_crit
-        n_perrow = 3
-        n_percol = int(float(n_plots) / float(n_perrow))
-        if n_percol * n_perrow < n_plots:
-            n_percol += 1
-        fig_heig = 2 * n_percol
+        ncols = 3
+        nrows = n_plots // ncols
+        if nrows * ncols < n_plots:
+            nrows += 1
+        fig_heig = 2 * nrows
         print(f'\nFigure with 2D-plots of {n_plots} pairs of criteria.')
 
         fig1 = plt.figure(figsize=(7, fig_heig), dpi=self.dpi)  # y was 10 (for one chart)
@@ -109,7 +111,7 @@ class Plots:
             for i_second in range(i_first + 1, self.n_crit):
                 name2 = self.cr_name[i_second]
                 print(f'Subplot {i_plot}, criteria: ({name1}, {name2})')
-                ax.append(fig1.add_subplot(n_percol, n_perrow, i_plot + 1))  # subplots numbered from 1
+                ax.append(fig1.add_subplot(nrows, ncols, i_plot + 1))  # subplots numbered from 1
                 ax[i_plot].set_xlabel(name1, va='center')
                 ax[i_plot].set_ylabel(name2, va='center')
                 ax[i_plot].set_xticks(ticks, labels=ticks, fontsize=6)
@@ -231,6 +233,7 @@ class Plots:
         self.figures['vars_alternative'] = fig
 
     def parallel(self):
+        # todo: the app freezes when a criterion choice button is clicked
         fig3 = plt.figure(figsize=(7, 3.2), dpi=self.dpi)
         fig3.canvas.manager.set_window_title(
             f'Criteria achievements for {self.n_sol} solutions.')
@@ -245,13 +248,12 @@ class Plots:
         self.figures['parallel'] = fig3
 
     def sol_stages(self):  # two subplots: 1. iters + solutions, 2. stage-max cube-size + actual max-size
-        summary_df = self.mc.par_rep.progr.df_stages
+        summary_df = self.wflow.par_rep.progr.df_stages
         if summary_df is None:
             print('\nPlots::sol_stage(): no data for solution stages yet.')
             return
         fig = plt.figure(figsize=(6, 2.5), dpi=self.dpi)
-        fig.canvas.manager.set_window_title(f'Summary data of {len(self.mc.par_rep.progr.neigh)} computation stages')
-
+        fig.canvas.manager.set_window_title(f'Summary of {len(self.wflow.par_rep.progr.neigh)} computation stages')
         plot_kw = dict(marker='o', markersize=5, linestyle='--', linewidth=2)
         ax = fig.add_subplot(1, 2, 1)
         ax.plot(summary_df['step'], summary_df['itr'],
@@ -289,14 +291,15 @@ class Plots:
         self.figures['stageProg'] = fig
 
     def kde_stages(self):  # for each stage: histogram + KDE
+        # todo: AS: pls improve vertical size (number of cols changed to 2); appears to be wrong for even
         #   number of plots
-        n_plots = len(self.mc.par_rep.progr.neigh)
+        n_plots = len(self.wflow.par_rep.progr.neigh)
         if n_plots < 2:
             print('\nPlots::kde_stages(): no data for KDE stages yet.')
             return
         mx_hight = 9.0
         ncols = 3
-        if len(self.mc.par_rep.progr.neigh[self.mc.par_rep.progr.cur_step - 1][-1]) == 0:
+        if len(self.wflow.par_rep.progr.neigh[self.wflow.par_rep.progr.cur_step - 1][-1]) == 0:
             n_plots -= 1  # plot for last stage not generated
         nrows = n_plots // ncols
         if nrows * ncols < n_plots:
@@ -304,16 +307,16 @@ class Plots:
         fig = plt.figure(figsize=(7, min(mx_hight, 2 * nrows)), dpi=self.dpi, tight_layout=True)
         fig.canvas.manager.set_window_title(f'Distribution of distance between neighbour solutions.')
 
-        for step in self.mc.par_rep.progr.neigh:
-            if len(self.mc.par_rep.progr.neigh[step][-1]) == 0:
+        for step in self.wflow.par_rep.progr.neigh:
+            if len(self.wflow.par_rep.progr.neigh[step][-1]) == 0:
                 print(f'Empty cube list for computation stage {step}.')
-                return
+                continue
             ax = fig.add_subplot(nrows, ncols, step + 1)
             neighbour_cube_sizes = []
             if self.cfg.get('verb') > 3:
                 print(f'{step = }')
-                print(f'neigh {self.mc.par_rep.progr.neigh[step]}')
-            for cube_id, cube_size in self.mc.par_rep.progr.neigh[step][-1]:
+                print(f'neigh {self.wflow.par_rep.progr.neigh[step]}')
+            for cube_id, cube_size in self.wflow.par_rep.progr.neigh[step][-1]:
                 if self.cfg.get('verb') > 3:
                     print(f'{cube_id = }, {cube_size = }')
                 neighbour_cube_sizes.append(cube_size)
@@ -344,6 +347,7 @@ class Plots:
         if self.n_crit < 3:  # just return for bi-criteria problem
             return
         if self.n_crit > 3:
+            # todo: implement 3D subplots for more than 3 criteria
             print(f'Plots.plot3D(): not implemented for {self.n_crit} criteria yet.')
             return
         # assert self.n_crit == 3, f'Plots.plot3D(): not implemented for {self.n_crit} criteria yet.'
@@ -360,7 +364,7 @@ class Plots:
                    label='Criteria Achievements', c=self.cat_num, cmap=self.cmap, s=50)
 
         # Cubes drawing
-        cubes = self.mc.par_rep.cubes.all_cubes  # aspiracja i rezewacja w CAF: aspAch, resAch
+        cubes = self.wflow.par_rep.cubes.all_cubes  # aspiracja i rezewacja w CAF: aspAch, resAch
         mxCubePlot = self.mc.opt('mxCubePlot', 0)
         for i, cube in cubes.items():
             # p1 = cube.aspAch
@@ -385,7 +389,7 @@ class Plots:
         # font = {'family': 'serif', 'color': 'darkred', 'weight': 'normal', 'size': 16,}
         # ax.view_init(elev=3, azim=-135, roll=0)
         ax.view_init(elev=15, azim=45, roll=0)
-        mxLabelPlot = self.mc.opt('mxLabelPlot', 0)
+        mxLabelPlot = self.wflow.mc.opt('mxLabelPlot', 0)
         for (i, seq) in enumerate(self.seq):
             # noinspection PyTypeChecker
             if i > mxLabelPlot:

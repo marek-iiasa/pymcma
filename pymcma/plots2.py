@@ -121,7 +121,6 @@ class InteractiveParallel:
             'colorbar': self.fig.add_subplot(gs_right[0, 0], sharey=self.axes['plot']),
             # 'radio': self.fig.add_subplot(gs_left[0, 0]),
             'slider': self.fig.add_subplot(gs_left[:, 0])
-            # 'slider': self.fig.add_subplot(gs_left[1, 0])
         }
 
     def generate_colors(self):

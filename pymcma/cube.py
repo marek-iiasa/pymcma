@@ -2,6 +2,10 @@ import math
 # noinspection SpellCheckingInspection
 from operator import itemgetter  # , attrgetter
 
+# todo: add to ParSol:
+#   prune marker (to close to another solution) to skip (almost) duplicated solutions during cube generation
+#   improve info on CAF (global, in [U, N], vs itr in [A, R]
+
 
 # noinspection SpellCheckingInspection
 class ParSol:     # one Pareto solution
@@ -128,14 +132,6 @@ class Cubes:     # collection of aCubes
         id2prune = []
         # size = self.cand[0][1]
         for (c_id, c_size) in self.cand:
-            '''
-            if c_size < size:    # no more candidate of the same size
-                if len(lst) > 0:    # break, if at least one candidate was found
-                    break
-                else:   # make list of cubes of a smaller size
-                    size = c_size
-                    continue
-            '''
             if self.cand_ok(c_id):
                 lst.append(c_id)
                 break   # take the first found empty-cube
@@ -243,7 +239,7 @@ class aCube:     # a Cube defined (in achievement values) by the given pair of n
             cr.is_ignored = None    # ignored can be only for selfish solutions
             v1 = self.s1.vals[i]
             v2 = self.s2.vals[i]
-            if cr.isBetter(v1, v2):  # s1 has better crit. value than s2
+            if cr.eqBetter(v1, v2):  # s1 has better (or equal)crit. value than s2
                 cr.asp = v1
                 cr.res = v2
             else:  # s2 has better crit. value than s1
