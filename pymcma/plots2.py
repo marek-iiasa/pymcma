@@ -63,12 +63,6 @@ class InteractiveParallel:
                                   valfmt='%0.1f', handle_style={'size': 10})
         self.slider.on_changed(self.update_slider)
 
-        # Add radio buttons
-        # self.radio = RadioButtons(self.axes['radio'], labels=self.cr_name,
-        #                           radio_props={'s': 40, 'c': 'tab:blue'},
-        #                           label_props={'fontsize': [6]*len(self.cr_name)})
-        # self.radio.on_clicked(self.update_radio)
-
     def init_parallel_axes(self, n=6):
         ax = self.axes['plot']
 

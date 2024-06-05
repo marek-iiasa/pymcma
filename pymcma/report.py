@@ -5,10 +5,7 @@ Reporting results of the MCMA iterations. Handling core-model is generic, i.e., 
 import warnings
 import pandas as pd
 import pyomo.environ as pe  # more robust than using import *
-# from .par_repr import ParRep
 from .plots import Plots
-# from ctr_mca import CtrMca
-# from crit import Crit
 
 
 # noinspection SpellCheckingInspection
@@ -47,14 +44,12 @@ class Report:
     # driver of processing of each solution
     def itr(self, m):   # m: current mc_block (invariant core-model linked in the ctor)
         """Process values of criteria and other vars in the current solution."""
-        # formatting doc: https://docs.python.org/3/library/string.html#formatstrings
-
         self.itr_id += 1    # itr_id inilialized at -1
         self.mc.cur_itr_id = self.itr_id
         # print(f'Extracting current solution values from model {m.name}, iter_id {self.itr_id}.')
 
         if not self.mc.is_opt:
-            return  # refrain from storing non-optimal solutions
+            return  # refrain from handling/storing non-optimal solutions
 
         cri_val = {}    # all criteria values in current solution
         # cri_ach = {}    # achievemtns cannot be defined before checking, if the solution is in the U/N range
@@ -78,8 +73,6 @@ class Report:
 
         # store crit values, also CAF for wflow.cur_stage > 1 (except of PayOff comp.)
         self.mc.critVal(cri_val)
-        # self.mc.prnPayOff()     # print, and optionally store payOff table
-
         self.itr_inf(m)     # store one-line info on each iteration
 
         if self.wflow.cur_stage < 2:   # don't store solutions during payOff table computations
@@ -204,16 +197,6 @@ class Report:
         plots.kde_stages()  # KDE + histograms vs stages
         plots.plot2D()    # 2D plots
         plots.parallel()  # Parallel coordinates plot
-        # plots.vars('actS')    # plot the requested model variables
-        # plots.vars_alternative()
-
         plots.save_figures()
         if plots.show_plot:
             plots.show_figures()
-
-        # todo: 3D plots need reconfiguration: either the change the pyCharm default browser to chrome or modify the
-        #  Safari version to either Safari beta or to Safari technology preview (see the Notes)
-        #  generation of 3D plots is suppressed until this problem will be solved.
-        # self.plot3()
-        # self.plot3a()
-        # raise Exception(f'ParRep::summary() not finished yet.')

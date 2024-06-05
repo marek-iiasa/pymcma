@@ -2,10 +2,6 @@ import math
 # noinspection SpellCheckingInspection
 from operator import itemgetter  # , attrgetter
 
-# todo: add to ParSol:
-#   prune marker (to close to another solution) to skip (almost) duplicated solutions during cube generation
-#   improve info on CAF (global, in [U, N], vs itr in [A, R]
-
 
 # noinspection SpellCheckingInspection
 class ParSol:     # one Pareto solution
@@ -151,8 +147,8 @@ class Cubes:     # collection of aCubes
                   f'size={best.size:.2f}, degen = {best.is_degen}.')
         else:
             print(f'\nNo cube from {len(self.cand)} candidates is suitable for defining preferences.')
-            # print('Termination2')
-        # prune the candidate list
+
+        # prune the candidate list (the selected cube, and non-empty cubes)
         for c_id in id2prune:
             # print(f'\ncand-list before removing c_id = {c_id}: {self.cand}')
             for item in self.cand:
@@ -161,13 +157,7 @@ class Cubes:     # collection of aCubes
                     self.cand.remove(item)
                     # print(f'cube_id {c_id} removed from the candidate list.')
                     break   # remove() destroys the list indexing, the loop must be re-entered
-                # else:
-                #     print(f'c_ind {i_id} skipped')
-            # print(f'after: {self.cand}\n')
 
-        # if len(self.sols) > 10:
-        #     print(f'Iteration test-break')
-        #     return None
         return best
 
     def lst_cubes(self):  # list cubes
@@ -281,30 +271,6 @@ class aCube:     # a Cube defined (in achievement values) by the given pair of n
                     self.resAch.append(achiv)
                     if self.mc.cfg.get('verb') > 1:
                         print(f'Crit. {cr.name}, edge {self.edges[i]:.1f}: crit achiv. fixed at A/R = {achiv:.1f}')
-                '''
-                # the below no longer use, but kept for possible further testing
-                print(f'Crit. {cr.name} set to in-active: edge {self.edges[i]:.2e} expanded to {expAch:.2e} by moving:'
-                      f'\n\tA from {oldA:.2e} to {cr.asp:.2e},  R from {oldR:.2e} to {cr.res:.2e}.')
-                # old version, not good (too much A/R span
-                span = 0.5 * abs(cr.utopia - cr.nadir)  # new span of the degenerated edge
-                span2 = span / 2.   # A and R by span2, if possible within [U, N]
-                distU = abs(cr.utopia - cr.asp)
-                distN = abs(cr.nadir - cr.res)
-                if distU < distN:  # empty edge closer to utopia
-                    if span2 < distU:   # A can be moved towards U by dist2
-                        cr.asp = oldA + cr.mult * span2
-                        cr.res = oldR - cr.mult * span2
-                    else:       # A can be moved to U by only a part of the dist2, thus R is moved more than span2
-                        cr.asp = cr.utopia
-                        cr.res = oldR - cr.mult * abs(span - distU)
-                else:   # empty edge closer to nadir
-                    if span2 < distN:   # R can be moved towards N by dist2
-                        cr.asp = oldA + cr.mult * span2
-                        cr.res = oldR - cr.mult * span2
-                    else:       # R can be moved to N by only a part of the dist2, thus A is moved more than span2
-                        cr.res = cr.nadir
-                        cr.asp = oldA + cr.mult * abs(span - distN)
-                '''
 
     # print: itr_ids of solutions defining the cube, cube size, lengths of cube edges (i.e., components of the size),
     # scaled criteria values defining the diameter-corners, scaled A/R values defining preferences for next iter.

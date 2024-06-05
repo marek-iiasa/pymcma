@@ -14,7 +14,6 @@ from .plots2 import InteractiveParallel
 sns.set()  # settings for seaborn plotting style
 
 
-# todo: Horizontal size of all plots should not be larger than the A4 paper width minus 20mm
 # noinspection SpellCheckingInspection
 class Plots:
     def __init__(self, wflow, df_vars):  # driver for plots
@@ -138,29 +137,10 @@ class Plots:
                 ax[i_plot].set_xlim(-5, 105)
                 ax[i_plot].set_ylim(-5, 105)
                 # ax[i_plot].scatter(x=self.df[name1], y=self.df[name2], c=self.cat_num, cmap=self.cmap, s=m_size)
-                '''
-                # labels of points used only for debugging purposes
-                for (i, seq) in enumerate(self.seq):
-                    ax[i_plot].text(self.df[self.cr_col[i_first]][i] + 2, self.df[self.cr_col[i_second]][i] + 2,
-                                    f'{seq}')
-                    if i > 20:
-                        break
-                '''
-                '''
-                # mplcursors don't work with subplots
-                crs.append(mplcursors.cursor(ax[i_plot], hover=True))  # mplcursors for interactive labels
-                crs[i_plot].connect("add", lambda sel: self.set_tooltip(sel, i_plot))
-                lambda sel: sel.annotation.set_text(  # 1st value taken from the df, others from the axes
-                f"{self.df[self.cols[0]] [sel.index]}: ({sel.target[0]:.2e}, {sel.target[1]:.2e})"))
-                '''
                 i_plot += 1
 
         plt.tight_layout()
         self.figures['plot2D'] = fig1
-
-    # def set_tooltip(self, sel, i):
-    #     sel.annotation.set_text(f'Label: {self.df[self.cols[0]][sel.target.index]} (Subplot {i})'
-    #                             f'\nCoordinates: ({sel.target[0]:.2f}, {sel.target[1]:.2f})')
 
     # plot the value of requested core-model variable along costs
     def vars(self, var_name):
@@ -171,7 +151,6 @@ class Plots:
         # df_vars constains values labeled as varName_index, where index is e.g., the technology ID (BTL, OTL, PTL)
         fig, ax = plt.subplots(figsize=(7, 5), dpi=self.dpi)
 
-        # TODO Marek: Please check what variables should be used as X and Y and change it to fit general case
         x_var = 'cost'  # Variable used for X axis
         y_vars = [c for c in self.df_vars.columns if 'act' in c]  # Variables which data will be stacked on Y axis
 
@@ -196,7 +175,6 @@ class Plots:
         colors = mpl.rcParams['axes.prop_cycle'].by_key()['color']
 
         fig, ax = plt.subplots(figsize=(7, 5), dpi=self.dpi)
-        # TODO Marek: Please check what variables should be used as X and Y and change it to fit general case
         x_var = 'cost'  # Variable used for X axis
         y_vars = [c for c in self.df_vars.columns if 'act' in c]
 
@@ -233,7 +211,6 @@ class Plots:
         self.figures['vars_alternative'] = fig
 
     def parallel(self):
-        # todo: the app freezes when a criterion choice button is clicked
         fig3 = plt.figure(figsize=(7, 3.2), dpi=self.dpi)
         fig3.canvas.manager.set_window_title(
             f'Criteria achievements for {self.n_sol} solutions.')
@@ -291,8 +268,6 @@ class Plots:
         self.figures['stageProg'] = fig
 
     def kde_stages(self):  # for each stage: histogram + KDE
-        # todo: AS: pls improve vertical size (number of cols changed to 2); appears to be wrong for even
-        #   number of plots
         n_plots = len(self.wflow.par_rep.progr.neigh)
         if n_plots < 2:
             print('\nPlots::kde_stages(): no data for KDE stages yet.')

@@ -38,7 +38,7 @@ class McMod:
         n_ignor = len(ign_cr)       # number of ignored (while defining Pareto-set corners) criteria
         do_corners = n_ignor > 0    # different reg-terms of the AF are used while computing the Pareto-set corners
         assert self.mc.n_crit == n_active + n_notAct + n_ignor, \
-            f'Inconsistent cri-status: {n_active=}, {n_notAct=}, {n_ignor=}; all_crit {self.mc.n_crit}'
+            f'Inconsistent criteria status: {n_active=}, {n_notAct=}, {n_ignor=}; all_crit {self.mc.n_crit}'
         if self.verb > 2:
             print(f'McMod::mc_itr(): stage {self.wflow.cur_stage}, number of criteria: {n_active} active, '
                   f'{n_notAct} not-active, {n_ignor} ignored.')
@@ -46,7 +46,6 @@ class McMod:
             raise Exception(f'McMood::mc_itr(): handling corners cannot be used in stage {self.wflow.cur_stage}.')
 
         m1_vars = self.m1.component_map(ctype=pe.Var)  # all variables of the m1 (core model)
-        # m.af = pe.Var(domain=pe.Reals, doc='AF')      # pe.Reals gives warning
         # Achievement Function (AF), maximized; af = caf_min + caf_reg, except of selfish optimizations
         m.af = pe.Var(doc='AF')
 
@@ -184,28 +183,13 @@ class McMod:
                 return mx.caf[ix] == 0.
                 # return pe.Constraint.Skip
 
-        '''
-        # the version below also works; it assigns consecutive numbers (instead of names) as the constraint index
-        m.cafD = pe.ConstraintList()
-        for (ix, sx) in m.S:
-            print(f'generating constraint for pair of indices (CAF, segment of its PWL) = ({ix}, {sx}).')
-            pwlx = pwls[ix]     # list of PWL segments of ix-th CAF
-            abx = pwlx[sx]      # params of line defining the current segment:  y = abx[0] * x + abx[1]
-            print(f'({ix = }, {sx = }): a = {abx[0]:.2e}, b = {abx[1]:.2e}')
-            m.cafD.add(m.caf[ix] - abx[0] * m.x[ix] <= abx[1])  # caf[i] <= a * x[i] + b
-        '''
-
-        # if self.mc.cur_stage == 4:   # neutral solution, PWLs with possibly more than one segment
-        #     print('\n---  MC_block:')
-        #     m.pprint()
-        #     print(f'---  end of specs of the MC_blok.\n')
-
         # min of caf_i, i in A (i.e., set of active criteria)
         @m.Constraint(m.A)
         def cafMinD(mx, ii):    # nothing to be skipped, only active criteria included in the m.A set
             # return pe.Constraint.Skip
             return mx.cafMin <= mx.caf[ii]
 
+        # reg-term(s) differ for computing (1) Pareto-set corners and (2) Pareto-set representation
         if do_corners:  # reg-term defined specifically for computing Pareto-set corners
             assert n_active == 1, f'{n_active} ctive criteria in processing corners,'
             assert n_notAct == 1, f'{n_notAct} not-criteria in processing corners.'
