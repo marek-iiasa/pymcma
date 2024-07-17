@@ -4,9 +4,9 @@ Handle data structure and control flows of the MCMA
 # import sys      # needed from stdout
 # import os
 import math
-# from os import R_OK, access
-# from os.path import isfile
-from .crit import Crit      # , CrPref
+from os import R_OK, access
+from os.path import isfile
+from .crit import Crit, CrPref
 # from .par_repr import ParRep
 
 
@@ -15,10 +15,11 @@ class CtrMca:   # control flows of MCMA at diverse computations states
     def __init__(self, wflow):   # par_rep False/True controls no/yes Pareto representation mode
         self.wflow = wflow
         self.cfg = wflow.cfg
-        self.f_crit = 'config.txt'   # file with criteria specification
+        # self.f_crit = 'config.txt'   # file with criteria specification (no longer used)
         self.cr = []        # objects of Crit class, each representing the corresponding criterion
         self.n_crit = 0     # number of defined criteria == len(self.cr)
         self.deg_exp = False    # expansion of degenerated cube dimensions
+        # self.ana_dir = cfg.get('ana_dir')  # wdir for the analysis (no longer needed: mcma runs in ana_dir)
         # tolerances
         self.cafAsp = 100.   # value of CAF at A (if A undefined, then at U)
         self.critScale = 1000.   # range [utopia, nadir] of scaled values (used in self.scale())
@@ -32,8 +33,8 @@ class CtrMca:   # control flows of MCMA at diverse computations states
         self.verb = self.opt('verb', 1)   # print verbosity: 0 - min., 1 - key, 2 - debug, 3 - detailed
         # the below to be used for user-defined preferences (currently not used)
         # self.f_pref = 'pref.txt'     # file with defined preferences' set, currently not used
-        # self.pref = []    # list of preferences defined for each blocks
-        # self.n_pref = 0     # number of blocks of read-in preferences
+        self.pref = []    # list of preferences defined for each blocks
+        self.n_pref = 0     # number of blocks of read-in preferences
         self.cur_pref = 0   # index of currently processed preference
 
         self.epsilon = self.opt('eps', self.epsilon)  # scaling of the AF regularizing term
@@ -117,3 +118,99 @@ class CtrMca:   # control flows of MCMA at diverse computations states
         else:
             return False
 
+    # handling user-defined A/R
+    def usrPref(self):  # get user-preferences (if no more pref avail. then set self.cur_stage = 6 for a clean exit)
+        # make sure that all criteria are active by default
+        for crit in self.cr:
+            crit.is_active = True
+        # if self.n_pref == 0:    # no preferences defined, read them
+        #     self.readPref()
+        # print(f'{self.n_pref = }, {self.n_pref == 0}, {self.cur_pref = }, {self.cur_pref >= self.n_pref}')
+        print(f'Out of {self.n_pref} user-specified preferences {self.cur_pref} processed.')
+        if self.n_pref == 0 or self.cur_pref >= self.n_pref:    # no more user-pref. to handle
+            return False  # finish analysis
+        else:   # use next unprocessed user preference set
+            # print(f'Applying {self.cur_pref}-th set of user preferences.')
+            items = self.pref[self.cur_pref]
+            self.cur_pref += 1
+            for item in items:
+                c_ind = item.parent
+                crit = self.cr[c_ind]
+                crit.asp = item.asp
+                crit.res = item.res
+                crit.is_active = item.is_active
+                crit.is_ignored = False
+                print(f'Attributes of crit "{crit.name}": A {crit.asp}, R {crit.res}, active {crit.is_active}.')
+            return True
+
+    def readPref(self, f_name):  # read preferences provided in file f_name (optionally defined in cfg.yml)
+        # each line defines: cr_name, A, R, optionally activity for a criterion
+        # sets of preferences for all criteria should be separated by line having only #-char in first column
+        # preferences for criteria not specified in a set are reset to: A=utopia, R=nadir, criterion not-active
+
+        # raise Exception('CtrMca::readPref() not adapted yet to the new workflow.')
+
+        print(f'\nReading user-defined A/R from file "{f_name}".')
+        assert isfile(f_name) and access(f_name, R_OK), f'User-defined A/RR unreadable from file "{f_name}".'
+        self.n_pref = 0  # number of specified sets of preferences
+        lines = []
+        with open(f_name) as reader:  # read all lines and store for processing next
+            for n_line, line in enumerate(reader):
+                line = line.rstrip("\n")
+                # print(f'line {n_line}: "{line}"')
+                if len(line) == 0 or line[0] == '*':    # skip empty or commented lines
+                    continue
+                if line[0] == "#" or len(line) == 1:  # separator of set of preferences
+                    # print(f'marker found in line {n_line}')
+                    pass
+                else:
+                    words = line.split()
+                    n_words = len(words)    # crit-name, type (min or max), name of core-model var defining the crit.
+                    assert 3 <= n_words <= 4, f'line {line} has {n_words}; required are either three or four.'
+                    for i in [1, 2]:
+                        assert type(float(words[i])) == float and words[i] is not None, \
+                            f'line "{line}": "{words[i]}" should be a float number.'
+                lines.append(line)
+        line = '#'
+        lines.append(line)  # make sure that the last line marks end of a set
+
+        print(f'Process {len(lines)} lines with user preferences.')
+        cur_set = []    # current set of preferences (specified in blocks of lines separated by #)
+        for n_line, line in enumerate(lines):
+            # print(f'processing {n_line}-th line: {line}')
+            if line[0] != '#':  # process the line
+                words = line.split()    # number of words check above
+                c_ind = self.cr_ind(words[0], False)
+                if c_ind < 0:
+                    raise Exception(f'unknown crit. name "{words[0]}" in {n_line}: "{line}".')
+                pref_item = CrPref(c_ind, float(words[1]), float(words[2]), len(words) == 3)
+                self.cr[c_ind].chkAR(pref_item, n_line)  # check correctness of A and R values
+                for item in cur_set:    # check, if crit. preferences are already defined in the current set
+                    if c_ind == item.parent:
+                        raise Exception(f'duplicated (in the current set, line {n_line}) preferences for '
+                                        f'criterion "{self.cr[c_ind].name}".')
+                cur_set.append(pref_item)   # add to the current set
+            else:
+                n_items = len(cur_set)
+                if n_items == self.n_crit:
+                    self.pref.append(cur_set)
+                else:
+                    if n_items > 0:
+                        raise Exception(f'{n_items} preference(s) in the block ending at line {n_line} for  '
+                                        f'{self.n_crit} defined criteria.')
+                    else:
+                        print(f'ignoring empty block ending at line {n_line}')
+                cur_set = []    # empty for starting a new set
+
+        self.n_pref = len(self.pref)
+        print(f'Prepared {self.n_pref} sets of user-defined preferences.')
+
+    # def set_pref(self):     # functionality moved to workflow
+    #     sys.stdout.flush()  # needed for printing exception at the output end
+    #     raise Exception(f'Mcma::set_pref() not implemented yet for stage: {self.cur_stage}.')
+    #
+    # def par_pref(self):  # generate preferences for finding next solution in Pareto set representation
+    #     assert self.is_par_rep, f'CtrMca::par_pref() should not be used for usr-def pref.'
+    #     assert self.par_rep is not None, f'CtrMca::par_pref() should be initialized earlier.'
+    #     assert self.cur_stage in [4, 5], f'CtrMca::par_pref() should not be called for cur_stage {self.cur_stage}.'
+    #     self.par_rep.pref()     # define largest cube, set A/R&activity in mc.cr[] in the model (not ASF) scale

@@ -77,10 +77,10 @@ class Plots:
         plt.show()
 
     def save_figures(self):
-        dpi = 300 if self.hire_plot else 100
+        dpi = 300
         for name, fig in self.figures.items():
             filename = f'{self.dir_name}{name}.png'
-            fig.savefig(filename, dpi=dpi, bbox_inches='tight')
+            fig.savefig(filename, dpi=dpi)
             print(f'Plot "{name}" is saved to "{filename}".')
 
     def plot2D(self):
@@ -137,10 +137,29 @@ class Plots:
                 ax[i_plot].set_xlim(-5, 105)
                 ax[i_plot].set_ylim(-5, 105)
                 # ax[i_plot].scatter(x=self.df[name1], y=self.df[name2], c=self.cat_num, cmap=self.cmap, s=m_size)
+                '''
+                # labels of points used only for debugging purposes
+                for (i, seq) in enumerate(self.seq):
+                    ax[i_plot].text(self.df[self.cr_col[i_first]][i] + 2, self.df[self.cr_col[i_second]][i] + 2,
+                                    f'{seq}')
+                    if i > 20:
+                        break
+                '''
+                '''
+                # mplcursors don't work with subplots
+                crs.append(mplcursors.cursor(ax[i_plot], hover=True))  # mplcursors for interactive labels
+                crs[i_plot].connect("add", lambda sel: self.set_tooltip(sel, i_plot))
+                lambda sel: sel.annotation.set_text(  # 1st value taken from the df, others from the axes
+                f"{self.df[self.cols[0]] [sel.index]}: ({sel.target[0]:.2e}, {sel.target[1]:.2e})"))
+                '''
                 i_plot += 1
 
         plt.tight_layout()
         self.figures['plot2D'] = fig1
+
+    # def set_tooltip(self, sel, i):
+    #     sel.annotation.set_text(f'Label: {self.df[self.cols[0]][sel.target.index]} (Subplot {i})'
+    #                             f'\nCoordinates: ({sel.target[0]:.2f}, {sel.target[1]:.2f})')
 
     # plot the value of requested core-model variable along costs
     def vars(self, var_name):

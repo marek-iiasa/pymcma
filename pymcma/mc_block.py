@@ -46,6 +46,7 @@ class McMod:
             raise Exception(f'McMood::mc_itr(): handling corners cannot be used in stage {self.wflow.cur_stage}.')
 
         m1_vars = self.m1.component_map(ctype=pe.Var)  # all variables of the m1 (core model)
+        # m.af = pe.Var(domain=pe.Reals, doc='AF')      # pe.Reals gives warning
         # Achievement Function (AF), maximized; af = caf_min + caf_reg, except of selfish optimizations
         m.af = pe.Var(doc='AF')
 
@@ -182,6 +183,22 @@ class McMod:
                 # CAF needs to be defined, although it enters only the reg. term
                 return mx.caf[ix] == 0.
                 # return pe.Constraint.Skip
+
+        '''
+        # the version below also works; it assigns consecutive numbers (instead of names) as the constraint index
+        m.cafD = pe.ConstraintList()
+        for (ix, sx) in m.S:
+            print(f'generating constraint for pair of indices (CAF, segment of its PWL) = ({ix}, {sx}).')
+            pwlx = pwls[ix]     # list of PWL segments of ix-th CAF
+            abx = pwlx[sx]      # params of line defining the current segment:  y = abx[0] * x + abx[1]
+            print(f'({ix = }, {sx = }): a = {abx[0]:.2e}, b = {abx[1]:.2e}')
+            m.cafD.add(m.caf[ix] - abx[0] * m.x[ix] <= abx[1])  # caf[i] <= a * x[i] + b
+        '''
+
+        # if self.mc.cur_stage == 4:   # neutral solution, PWLs with possibly more than one segment
+        #     print('\n---  MC_block:')
+        #     m.pprint()
+        #     print(f'---  end of specs of the MC_blok.\n')
 
         # min of caf_i, i in A (i.e., set of active criteria)
         @m.Constraint(m.A)

@@ -68,7 +68,7 @@ class Cubes:     # collection of aCubes
         self.parRep = parRep    # Pareto-set representation object
         self.sols = parRep.sols    # Pareto solutions (without duplicates)
         self.clSols = parRep.clSols    # Pareto solutions (without duplicates)
-        self.min_size = 5.      # cube's min. LInf size for including the cube to analysis
+        self.min_size = float(parRep.mc.opt('mxGap', 5))    # cube's min. LInf size for including the cube to analysis
         self.all_cubes = {}     # all generated cubes: keys defined by cube's id
         self.cand = []          # cubes that are candidates for next iteration
         self.small = 0      # number of small ignored
@@ -147,7 +147,6 @@ class Cubes:     # collection of aCubes
                   f'size={best.size:.2f}, degen = {best.is_degen}.')
         else:
             print(f'\nNo cube from {len(self.cand)} candidates is suitable for defining preferences.')
-
         # prune the candidate list (the selected cube, and non-empty cubes)
         for c_id in id2prune:
             # print(f'\ncand-list before removing c_id = {c_id}: {self.cand}')
@@ -157,7 +156,6 @@ class Cubes:     # collection of aCubes
                     self.cand.remove(item)
                     # print(f'cube_id {c_id} removed from the candidate list.')
                     break   # remove() destroys the list indexing, the loop must be re-entered
-
         return best
 
     def lst_cubes(self):  # list cubes

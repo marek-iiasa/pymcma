@@ -6,6 +6,7 @@ import warnings
 import pandas as pd
 import pyomo.environ as pe  # more robust than using import *
 from .plots import Plots
+from .cluster import Cluster  # cluster object
 
 
 # noinspection SpellCheckingInspection
@@ -37,6 +38,7 @@ class Report:
         self.itr_id = -1
         self.prev_itr = 0   # number of previously made iters
         self.cur_itr = 0   # number of currently made iters
+        self.plots = None
 
         print(f'\nReport ctor; results/plots dir: "{self.rep_dir}".     -------------')
         print(f'Core-model variables to be reported: {self.rep_vars}')
@@ -44,6 +46,7 @@ class Report:
     # driver of processing of each solution
     def itr(self, m):   # m: current mc_block (invariant core-model linked in the ctor)
         """Process values of criteria and other vars in the current solution."""
+
         self.itr_id += 1    # itr_id inilialized at -1
         self.mc.cur_itr_id = self.itr_id
         # print(f'Extracting current solution values from model {m.name}, iter_id {self.itr_id}.')
@@ -190,13 +193,35 @@ class Report:
         print(f'{len(df)} unique solutions stored in {f_name}. '
               f'{len(self.wflow.par_rep.clSols)} duplicated solutions skipped.')
 
+        # clustering solutions
+        n_clust = self.wflow.mc.opt('nClust', 0)
+        if n_clust > 0:
+            self.wflow.cluster = Cluster(self.wflow.rep)
+            self.wflow.cluster.mk_clust(n_clust)
+        elif n_clust < 0:
+            raise Exception(f'negative ({n_clust}) number of clusters not allowed.')
+
         # plot solutions
-        plots = Plots(self.wflow, self.df_vars)    # plots
-        plots.plot3D()    # 3D plot
-        plots.sol_stages()  # solutions & itr vs stage, cube-sizes vs stages
-        plots.kde_stages()  # KDE + histograms vs stages
-        plots.plot2D()    # 2D plots
-        plots.parallel()  # Parallel coordinates plot
-        plots.save_figures()
-        if plots.show_plot:
-            plots.show_figures()
+        self.plots = Plots(self.wflow, self.df_vars)    # plots
+        self.plots.plot3D()    # 3D plot
+        self.plots.plot2D()    # 2D plots
+        self.plots.parallel()  # Parallel coordinates plot
+        self.plots.sol_stages()  # solutions & itr vs stage, cube-sizes vs stages
+        self.plots.kde_stages()  # KDE + histograms vs stages
+        # plots.vars('actS')    # plot the requested model variables
+        # plots.vars_alternative()
+
+        # plot clusters
+        if self.wflow.cluster is not None:
+            self.wflow.cluster.plots()
+
+        self.plots.save_figures()
+        if self.plots.show_plot:
+            self.plots.show_figures()
+
+        # todo: 3D plots need reconfiguration: either the change the pyCharm default browser to chrome or modify the
+        #  Safari version to either Safari beta or to Safari technology preview (see the Notes)
+        #  generation of 3D plots is suppressed until this problem will be solved.
+        # self.plot3()
+        # self.plot3a()
+        # raise Exception(f'ParRep::summary() not finished yet.')

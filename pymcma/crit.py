@@ -67,6 +67,7 @@ class Crit:     # definition and attributes of a single criterion
 
     def setUtopia(self, val):   # to be called only once for each criterion
         assert self.utopia is None, f'utopia of crit {self.name} already set.'
+        # todo: for small values use shift instead multiplication
         # self.utopia = self.utoAdj * val     # slightly adjusted to avoid problems with comparisons/update
         self.utopia = val     # slightly adjusted to avoid problems with comparisons/update
         print(f'utopia of crit "{self.name}" set to {val}.')
@@ -148,6 +149,20 @@ class Crit:     # definition and attributes of a single criterion
             if val1 < val2:
                 return True
         return False
+
+    '''
+    # old version, no longer used
+    def isBetter(self, val1, val2):   # return true if val1 is better or equal to than val2
+        if val1 is None or val2 is None:  # PWL takes care about undefined values
+            return True
+        if self.mult == 1:  # max criterion
+            if val1 >= val2:
+                return True
+        else:  # min criterion
+            if val1 <= val2:
+                return True
+        return False
+    '''
 
     def chkAR(self, pref_item, n_line):   # check correctness of A and R values specified by the user
         asp = pref_item.asp

@@ -31,12 +31,14 @@ def driver(cfg):
     wflow = WrkFlow(cfg, m1)
     verb = wflow.mc.verb
 
-    # select solver
-    opt = pe.SolverFactory('glpk')  # solves LP and MIP
-    # opt = pe.SolverFactory('ipopt') # solves both LP and NLP, but not MIP
+    # select solver (default glpk, other solvers can be selected in cfg.yml by: solver: solver_id
+    # glpk - solves LP and MIP; iopt - solves LP and NL, but not MIP; gams uses cplex (but with the interface overhead)
+    solver_id = wflow.mc.opt('solver', 'glpk')
+    print(f'Selected solver_id: {solver_id}')
+    opt = pe.SolverFactory(solver_id)
 
     n_iter = 0
-    max_itr = cfg.get('mxIter')
+    max_itr = wflow.mc.opt('mxIter', 100)
     print(f'Maximum number of iterations: {max_itr}')
     while n_iter < max_itr:   # just for safety; should not be needed for a proper stop criterion
         # i_stage = mc.set_stage()  # define/check current analysis stage
@@ -64,6 +66,7 @@ def driver(cfg):
             # results = opt.solve(m, tee=True)
             results = opt.solve(m, tee=False)
             wflow.mc.is_opt = chk_sol(results)  # solution status: True, if optimal, False otherwise
+
         # print('processing solution ----')
         if wflow.mc.is_opt:
             i_stage = wflow.itr_sol(mc_part)  # process solution, set next stage in wflow, and return it
