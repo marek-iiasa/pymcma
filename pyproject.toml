@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pymcma"
-version = "1.1.0"
+version = "2.0.0"
 authors = [
   { name="M. Makowski, J. Granat, A. Shekhovtsov", email="marek@iiasa.ac.at" },
 ]
@@ -21,6 +21,8 @@ dependencies = [
     "matplotlib",
     "pandas",
     "scipy",
+    "scikit-learn",
+    "scikit-learn-extra"
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
